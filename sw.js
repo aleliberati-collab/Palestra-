@@ -1,6 +1,6 @@
 // Service worker di Palestra: tiene l'app disponibile offline.
 // VERSION viene sostituita da build.mjs a ogni build: cambia la cache e fa partire l'aggiornamento.
-const VERSION = "c4ccf4ead34c";
+const VERSION = "488a3743e1d4";
 const CACHE = "palestra-" + VERSION;
 const SHELL = [
   "./",

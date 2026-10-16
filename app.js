@@ -698,11 +698,12 @@ function renderDay(){
   const badge = aths.some(a => forms[a].restored) ? `<span class="badge" style="color:var(--warn);background:var(--warn-soft)">Bozza ripresa</span>` :
     aths.every(a => forms[a].saved && !forms[a].touched) ? `<span class="badge">✓ Salvata</span>` : "";
   h += `<div class="dayhead"><h2><small>${esc(day.name)} · ${who}</small>${day.label}</h2>
-    <div class="row-actions">${badge}<label class="field">Data seduta<input type="date" id="sessDate" value="${state.date}"></label></div></div><div class="list">`;
+    <div class="row-actions">${badge}<label class="field">Data seduta<input type="date" id="sessDate" value="${state.date}"></label></div></div>
+    <div class="live" id="live-stats" aria-live="polite"></div><div class="list">`;
   const wu = WARMUP[state.view];
   const warmAll = aths.every(a => forms[a].warm);
   h += `<section class="block" aria-label="Riscaldamento"><div class="block-top"><span class="ttl">Mobilità · 5 min<small>${esc(wu.focus)}. Servono gli elastici.</small></span><button class="ghost" id="wuStart">Avvia guidato</button></div>
-    <details class="more" id="wuDetails"${state.open.wuDetails!==false?" open":""}><summary>I ${wu.drills.length} esercizi, con posizione di inizio e di fine</summary><ol class="drills">${wu.drills.map(d=>`<li><span class="dn">${esc(d.n)}</span><span class="dd">${esc(d.d)}</span>${mobFigs(d.fig)}<span class="dc">${esc(d.c)}</span></li>`).join("")}</ol></details>
+    <details class="more" id="wuDetails"${state.open.wuDetails?" open":""}><summary>I ${wu.drills.length} esercizi, con posizione di inizio e di fine</summary><ol class="drills">${wu.drills.map(d=>`<li><span class="dn">${esc(d.n)}</span><span class="dd">${esc(d.d)}</span>${mobFigs(d.fig)}<span class="dc">${esc(d.c)}</span></li>`).join("")}</ol></details>
     <div class="donerow"><span class="q">Fatto?</span><button data-warm="1" aria-pressed="${warmAll}">Mobilità completata</button></div></section>`;
 
   items.forEach((it, idx) => {
@@ -712,7 +713,7 @@ function renderDay(){
     const isNew = aths.every(a => !sessionsFor(ex.id, a, null, true).length) && !BASE[ex.id];
     h += `<section class="ex${isMain?" ex-main":""}" aria-label="${esc(ex.name)}">
       <div class="ex-head">
-        <div class="fig-tile">${figSVG(ex.id, ex.name)}<a class="vid" href="${videoURL(ex.name)}" target="_blank" rel="noopener">Video tecnica ↗</a></div>
+        <div class="fig-tile">${figSVG(ex.id, ex.name)}<a class="vid" href="${videoURL(ex.name)}" target="_blank" rel="noopener">Video ↗</a></div>
         <div class="ex-info">
           <div class="ex-name"><span class="role${isMain?" main":""}">${ROLE_LABEL[ex.role]}</span>${isNew?`<span class="new">Nuovo</span>`:""}<span class="nm">${esc(ex.name)}</span><span class="sub">${unit}${couple?"":"step "+fmt(stepOf(ex,ath))+" kg"}</span></div>
           <div class="scheme">${sc.sets} × ${sc.min}${sc.max!==sc.min?"-"+sc.max:""}<small>RIR ${sc.rir}</small></div>
@@ -790,13 +791,17 @@ function laneHTML(ath, ex, sc, ph, f, couple, differs){
     ${sg.kg ? platesHTML(ex, ath, sg.kg) : ""}
     ${isMain && sg.kg ? (ws=>ws.length?`<div class="warmsets"><span>Avvicinamento</span>${ws.map(w=>`<span class="ws">${fmt(w.kg)}×${w.reps}</span>`).join("")}</div>`:"")(warmupSets(ex, ath, sg.kg)) : ""}
     <div class="last">${prev ? `Ultima (${fmtDate(prev.date)}${prev.deload?", scarico":""}): <b class="num">${fmt(topKg(prev.entries[ex.id]))} kg</b> · rip ${prev.entries[ex.id].map(s=>s.reps).join(" / ")}${prev.fb?.[ex.id]?` · ${prev.fb[ex.id]==="limite"?"al limite":prev.fb[ex.id]}`:""}` : (sg.kind==="find" ? "Prima volta: parti leggero, sali serie dopo serie finché resti a RIR " + sc.rir + "." : "Nessuna seduta registrata con questo esercizio.")}</div>
-    <div class="sets">`;
+    <div class="sets" role="table" aria-label="Serie di ${esc(ex.name)}${couple?" · "+SHORT[ath]:""}">
+      <div class="sethead" role="row"><span>#</span><span>Precedente</span><span>${ex.eq==="db"?"kg/man.":"kg"}</span><span>Rip</span><span aria-hidden="true">✓</span></div>`;
+  const prevSets = prev ? prev.entries[ex.id] : [];
   f.sets[ex.id].forEach((s,i)=>{
     const rp = parseInt(s.reps,10); const cls = isNaN(rp)?"":(rp>=sc.max?"hit":(rp<sc.min?"miss":""));
     const who = couple ? SHORT[ath]+" " : "";
-    h += `<div class="setrow"><span class="lbl">S${i+1}</span>
-      <label><input id="kg-${ath}-${ex.id}-${i}" data-ath="${ath}" data-ex="${ex.id}" data-i="${i}" data-f="kg" type="number" inputmode="decimal" step="0.1" min="0" value="${esc(s.kg)}" placeholder="kg" aria-label="${who}${esc(ex.name)} serie ${i+1} kg"><span>kg</span></label>
-      <label><input id="rp-${ath}-${ex.id}-${i}" class="${cls}" data-ath="${ath}" data-ex="${ex.id}" data-i="${i}" data-f="reps" data-min="${sc.min}" data-max="${sc.max}" type="number" inputmode="numeric" step="1" min="0" value="${esc(s.reps)}" placeholder="${sg.reps}" aria-label="${who}${esc(ex.name)} serie ${i+1} ripetizioni"><span>rip</span></label>
+    const ps = prevSets[i];
+    h += `<div class="setrow${s.reps!==""?" done":""}" role="row"><span class="lbl">${i+1}</span>
+      ${ps ? `<button class="prev" type="button" data-ath="${ath}" data-prev="${ex.id}" data-i="${i}" data-kg="${ps.kg}" data-reps="${ps.reps}" aria-label="${who}copia la volta scorsa: ${fmt(ps.kg)} kg per ${ps.reps}">${fmt(ps.kg)}×${ps.reps}</button>` : `<span class="prev none">—</span>`}
+      <input id="kg-${ath}-${ex.id}-${i}" data-ath="${ath}" data-ex="${ex.id}" data-i="${i}" data-f="kg" type="number" inputmode="decimal" step="0.1" min="0" value="${esc(s.kg)}" placeholder="kg" aria-label="${who}${esc(ex.name)} serie ${i+1} kg">
+      <input id="rp-${ath}-${ex.id}-${i}" class="${cls}" data-ath="${ath}" data-ex="${ex.id}" data-i="${i}" data-f="reps" data-min="${sc.min}" data-max="${sc.max}" type="number" inputmode="numeric" step="1" min="0" value="${esc(s.reps)}" placeholder="${sg.reps}" aria-label="${who}${esc(ex.name)} serie ${i+1} ripetizioni">
       <button class="ok" id="ok-${ath}-${ex.id}-${i}" data-ath="${ath}" data-ok="${ex.id}" data-i="${i}" data-target="${sg.reps}" aria-pressed="${s.reps!==""}" aria-label="${who}serie ${i+1} fatta come previsto">✓</button></div>`;
   });
   h += `</div><div class="pr" id="pr-${ath}-${ex.id}" hidden></div><div class="fb" role="group" aria-label="Com'è andata ${esc(ex.name)}${couple?" a "+SHORT[ath]:""}"><span class="q">Com'è andata?</span>`;
@@ -817,7 +822,7 @@ main.addEventListener("input", e=>{
   withAth(a, ()=>{
     const f = getForm(); f.touched = true;
     f.sets[t.dataset.ex][+t.dataset.i][t.dataset.f] = t.value;
-    if(t.dataset.f==="reps"){ repsClass(t); const ok = document.getElementById(`ok-${a}-${t.dataset.ex}-${t.dataset.i}`); if(ok) ok.setAttribute("aria-pressed", String(t.value!=="")); }
+    if(t.dataset.f==="reps"){ repsClass(t); const ok = document.getElementById(`ok-${a}-${t.dataset.ex}-${t.dataset.i}`); if(ok) ok.setAttribute("aria-pressed", String(t.value!=="")); t.closest(".setrow")?.classList.toggle("done", t.value!==""); }
     saveDraft(formKey(), f);
   });
   prCheck(t.dataset.ex, a); updateSaveBar();
@@ -844,11 +849,22 @@ main.addEventListener("click", e=>{
       const kgIn = document.getElementById(`kg-${a}-${exId}-${i}`), rpIn = document.getElementById(`rp-${a}-${exId}-${i}`);
       if(set.kg==="" && i>0 && f.sets[exId][i-1].kg!==""){ set.kg = f.sets[exId][i-1].kg; if(kgIn) kgIn.value = set.kg; }
       if(set.reps===""){ set.reps = b.dataset.target; if(rpIn){ rpIn.value = set.reps; repsClass(rpIn); } }
-      f.touched = true; b.setAttribute("aria-pressed","true");
+      f.touched = true; b.setAttribute("aria-pressed","true"); b.closest(".setrow")?.classList.add("done");
       saveDraft(formKey(), f);
     });
     prCheck(b.dataset.ok, a); updateSaveBar();
     return;
+  }
+  if(b.dataset.prev){
+    withAth(a, ()=>{
+      const f = getForm(), exId = b.dataset.prev, i = +b.dataset.i, set = f.sets[exId][i];
+      set.kg = b.dataset.kg; set.reps = b.dataset.reps; f.touched = true;
+      const kgIn = document.getElementById(`kg-${a}-${exId}-${i}`), rpIn = document.getElementById(`rp-${a}-${exId}-${i}`), ok = document.getElementById(`ok-${a}-${exId}-${i}`);
+      if(kgIn) kgIn.value = set.kg; if(rpIn){ rpIn.value = set.reps; repsClass(rpIn); } if(ok) ok.setAttribute("aria-pressed","true");
+      b.closest(".setrow")?.classList.add("done");
+      saveDraft(formKey(), f);
+    });
+    prCheck(b.dataset.prev, a); updateSaveBar(); return;
   }
   if(b.dataset.fbex){
     withAth(a, ()=>{ const f = getForm(); f.touched=true; f.fb[b.dataset.fbex] = f.fb[b.dataset.fbex]===b.dataset.v ? undefined : b.dataset.v;
@@ -899,11 +915,22 @@ function collectEntries(){
   }
   return {entries, scheme, fb, n, rpe:f.rpe, warm:f.warm, core:f.core, note:(f.note||"").trim()};
 }
+function liveStatsHTML(per){
+  const planned = a => withAth(a, () => currentPlanDay().items.reduce((n,it)=>n+it.sc.sets, 0));
+  return per.map(p => {
+    const vol = Object.values(p.entries).flat().reduce((v,s)=>v+s.kg*s.reps, 0);
+    return `<div class="live-card${per.length>1?" lane-"+p.a:""}">${per.length>1?`<span class="lane-who">${SHORT[p.a]}</span>`:""}
+      <div class="live-k"><span class="v num">${p.n}<small>/${planned(p.a)}</small></span><span class="k">serie</span></div>
+      <div class="live-k"><span class="v num">${fmt(Math.round(vol))}<small> kg</small></span><span class="k">volume</span></div>
+      <div class="live-k"><span class="v num">${p.rpe ?? "—"}</span><span class="k">RPE</span></div></div>`;
+  }).join("");
+}
 function updateSaveBar(){
   const btn = document.getElementById("saveBtn"), msg = document.getElementById("saveMsg");
   if(state.view==="prog") return;
   const aths = athletesNow();
   const per = aths.map(a => withAth(a, () => ({a, ...collectEntries(), f:getForm()})));
+  const live = document.getElementById("live-stats"); if(live) live.innerHTML = liveStatsHTML(per);
   const total = per.reduce((s,p)=>s+p.n, 0);
   btn.disabled = !state.db || total===0;
   if(state.keepMsg && Date.now()-state.keepMsg < 12000 && !per.some(p=>p.f.touched)) return;
