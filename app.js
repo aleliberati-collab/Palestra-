@@ -1095,6 +1095,7 @@ function importBackup(e){
 }
 function backupBanner(){
   const banner = document.getElementById("banner"), d = daysSinceBackup();
+  if(!Object.keys(BASE).length){ banner.hidden = false; banner.textContent = "Profilo mancante: senza i pesi di partenza lunedì e mercoledì restano vuoti. Vai in Progressi → Importa backup e scegli palestra-profilo.json (Drive, cartella Claude/Palestra)."; return; }
   const show = LocalDB.count() > 0 && (d===null || d>=14);
   banner.hidden = !show;
   if(show) banner.textContent = d===null ? "Nessun backup ancora: salvalo da Progressi → Backup su Drive." : `Ultimo backup ${d} giorni fa: salvalo da Progressi → Backup su Drive.`;
@@ -1218,7 +1219,7 @@ function safeRender(){
   const fail = ()=>{};
   db.collection("logs").onSnapshot(snap=>{ state.hist = snap.docs.map(d=>({id:d.id, ...d.data()})); safeRender(); }, fail);
   db.collection("plans").onSnapshot(snap=>{ const p={}; snap.docs.forEach(d=>p[d.id]=d.data()); state.plans=p; for(const k in state.forms) if(!state.forms[k].touched) delete state.forms[k]; safeRender(); }, fail);
-  db.collection("settings").onSnapshot(snap=>{ const g={...state.gear}; snap.docs.forEach(d=>{ if(d.id==="profile") applyProfile(d.data()); else g[d.id]=d.data(); }); state.gear=g; try{ localStorage.setItem("pav-gear", JSON.stringify(g)); }catch(e){} safeRender(); }, ()=>{});
+  db.collection("settings").onSnapshot(snap=>{ const g={...state.gear}; snap.docs.forEach(d=>{ if(d.id==="profile") applyProfile(d.data()); else g[d.id]=d.data(); }); state.gear=g; backupBanner(); try{ localStorage.setItem("pav-gear", JSON.stringify(g)); }catch(e){} safeRender(); }, ()=>{});
   updateSaveBar();
   backupBanner();
 })();
