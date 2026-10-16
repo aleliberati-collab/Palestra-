@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Palestra A&amp;V</title>
+<meta name="description" content="Scheda, carichi e progressi in coppia, offline sul telefono." />
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#eceff2" />
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f1216" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<link rel="preload" href="fonts/barlow-condensed-700.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="wrap">
+  <header class="bar">
+    <div class="brand">
+      <h1>Palestra <span>A&amp;V</span></h1>
+      <div class="seg" role="group" aria-label="Atleta">
+        <button id="athA" data-ath="a" aria-pressed="true">A</button>
+        <button id="athV" data-ath="v" aria-pressed="false">V</button>
+        <button id="athAV" data-ath="both" aria-pressed="false" title="Le serie di entrambi in ogni esercizio">Insieme</button>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-view="lun" aria-selected="true">Lun · A</button>
+      <button role="tab" data-view="mer" aria-selected="false">Mer · B</button>
+      <button role="tab" data-view="ven" aria-selected="false">Ven · C</button>
+      <button role="tab" data-view="prog" aria-selected="false">Progressi</button>
+    </nav>
+  </header>
+  <div id="banner" class="banner" hidden></div>
+  <main id="main"></main>
+</div>
+<div class="dock">
+  <div class="savebar" id="savebar">
+    <div class="in">
+      <div class="msg" id="saveMsg">Inserisci le ripetizioni fatte, poi salva la seduta.</div>
+      <button class="btn" id="saveBtn" disabled>Salva seduta</button>
+    </div>
+  </div>
+</div>
+<div class="timer" id="timer" hidden aria-live="polite">
+  <div class="in">
+    <div class="row"><span class="lab" id="tmStep">Esercizio 1 di 7</span><span class="lab" id="tmNext"></span></div>
+    <div class="row"><span class="nm" id="tmName"></span><span class="sec" id="tmSec">0</span></div>
+    <div id="tmFig"></div>
+    <div class="cue" id="tmCue"></div>
+    <div class="bar"><i id="tmBar" style="width:0%"></i></div>
+    <div class="ctl"><button class="pri" id="tmPause">Pausa</button><button id="tmSkip">Avanti</button><button id="tmStop">Chiudi</button></div>
+  </div>
+</div>
+
+<div class="update-bar" id="update-bar" hidden>
+  <div class="inner"><span>Nuova versione pronta</span><button type="button" id="update-btn">Aggiorna</button></div>
+</div>
+<script src="store.js"></script>
+<script src="app.js"></script>
+<script>
+if (navigator.storage && navigator.storage.persist) {
+  navigator.storage.persisted().then(function (p) { if (!p) navigator.storage.persist(); }).catch(function () {});
+}
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("sw.js").then(function (reg) {
+      var bar = document.getElementById("update-bar");
+      var show = function (w) { bar.hidden = false; document.getElementById("update-btn").onclick = function () { w.postMessage("skipWaiting"); }; };
+      if (reg.waiting && navigator.serviceWorker.controller) show(reg.waiting);
+      reg.addEventListener("updatefound", function () {
+        var w = reg.installing; if (!w) return;
+        w.addEventListener("statechange", function () { if (w.state === "installed" && navigator.serviceWorker.controller) show(w); });
+      });
+      document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") reg.update().catch(function () {}); });
+    }).catch(function () {});
+    var reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", function () { if (reloaded) return; reloaded = true; location.reload(); });
+  });
+}
+</script>
+</body>
+</html>
