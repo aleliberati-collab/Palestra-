@@ -5,12 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Mobilità A&amp;V</title>
 <meta name="description" content="Stretching, flessibilità e mobilità del weekend, guidati e offline." />
-<meta name="theme-color" media="(prefers-color-scheme: light)" content="#edf1ef" />
-<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f1413" />
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6f1e9" />
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1b1e1b" />
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
 <link rel="apple-touch-icon" href="icons/icon-192.png" />
-<link rel="preload" href="../fonts/barlow-condensed-700.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="fonts/fraunces-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="fonts/nunito-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -42,12 +43,17 @@
   <div class="p-in">
     <div class="p-top"><span id="pStep"></span><span id="pBlock"></span></div>
     <div class="p-prog"><i id="pProg"></i></div>
-    <div class="p-phase" id="pPhase"></div>
+    <div class="p-head"><span class="p-phase" id="pPhase"></span><span class="p-side" id="pSide"></span></div>
     <div class="p-name" id="pName"></div>
-    <div class="p-side" id="pSide"></div>
-    <div class="p-fig" id="pFig"></div>
-    <div class="p-sec num" id="pSec" aria-live="off"></div>
-    <div class="p-bar"><i id="pBar"></i></div>
+    <div class="p-stage">
+      <svg class="p-ring" viewBox="0 0 200 200" aria-hidden="true">
+        <circle class="glow" id="pGlow" cx="100" cy="100" r="86"/>
+        <circle class="trk" cx="100" cy="100" r="94"/>
+        <circle class="arc" id="pArc" cx="100" cy="100" r="94" transform="rotate(-90 100 100)" stroke-dasharray="590.6" stroke-dashoffset="590.6"/>
+      </svg>
+      <div class="p-fig" id="pFig"></div>
+      <div class="p-sec num" id="pSec" aria-live="off"></div>
+    </div>
     <div class="p-cue" id="pCue"></div>
     <div class="p-next" id="pNext"></div>
     <div class="p-ctl">

@@ -47,30 +47,26 @@ function fequip(e, J){
     default: return "";
   }
 }
-function fbody(J, far){
+/* Corpo morbido: arti come linee continue con giunture arrotondate, busto pieno */
+const fpoly = (pts, cls) => `<polyline class="${cls}" points="${P(pts)}"/>`;
+function fbody(J){
   let s = "";
-  s += fline(J.hip,J.knee2,"fg-far")+fline(J.knee2,J.ank2,"fg-far")+fline(J.ank2,J.toe2,"fg-far");
-  s += fline(J.sho,J.elb2,"fg-far")+fline(J.elb2,J.wr2,"fg-far");
-  s += `<circle class="fg-hand-far" cx="${J.wr2[0].toFixed(1)}" cy="${J.wr2[1].toFixed(1)}" r="1.8"/>`;
+  s += fpoly([J.hip,J.knee2,J.ank2,J.toe2], "fg-far") + fpoly([J.sho,J.elb2,J.wr2], "fg-far");
   if(J.arch){ // schiena curva (cat-cow): curva quadratica, arch > 0 = schiena che scende
     const [hx,hy]=J.hip, [nx,ny]=J.neck, dx=nx-hx, dy=ny-hy, L=Math.hypot(dx,dy)||1;
     const cx=(hx+nx)/2 - dy/L*J.arch, cy=(hy+ny)/2 + dx/L*J.arch;
     s += `<path class="fg-body" d="M${hx.toFixed(1)} ${hy.toFixed(1)} Q${cx.toFixed(1)} ${cy.toFixed(1)} ${nx.toFixed(1)} ${ny.toFixed(1)}"/>`;
   } else s += fline(J.hip,J.neck,"fg-body");
-  s += fline(J.hip,J.knee,"fg-limb")+fline(J.knee,J.ank,"fg-limb")+fline(J.ank,J.toe,"fg-limb");
-  s += fline(J.sho,J.elb,"fg-limb")+fline(J.elb,J.wr,"fg-limb");
-  s += `<circle class="fg-hand" cx="${J.wr[0].toFixed(1)}" cy="${J.wr[1].toFixed(1)}" r="2"/>`;
-  s += `<circle class="fg-head" cx="${J.head[0].toFixed(1)}" cy="${J.head[1].toFixed(1)}" r="5.3"/>`;
+  s += fpoly([J.hip,J.knee,J.ank,J.toe], "fg-limb") + fpoly([J.sho,J.elb,J.wr], "fg-limb");
+  s += `<circle class="fg-head" cx="${J.head[0].toFixed(1)}" cy="${J.head[1].toFixed(1)}" r="5.8"/>`;
   return s;
 }
-function fbodyFront(F, legs){
+function fbodyFront(F){
   let s = "";
-  s += fline([F.c,17],[F.c,47],"fg-body");
-  s += fline([F.c-9,21],[F.c+9,21],"fg-limb");
-  s += fline([F.c-5,47],[F.c-7,GROUND],"fg-limb")+fline([F.c+5,47],[F.c+7,GROUND],"fg-limb")+fline([F.c-5,47],[F.c+5,47],"fg-limb");
-  s += fline(F.sL,F.eL,"fg-limb")+fline(F.eL,F.wL,"fg-limb")+fline(F.sR,F.eR,"fg-limb")+fline(F.eR,F.wR,"fg-limb");
-  s += `<circle class="fg-hand" cx="${F.wL[0].toFixed(1)}" cy="${F.wL[1].toFixed(1)}" r="2"/><circle class="fg-hand" cx="${F.wR[0].toFixed(1)}" cy="${F.wR[1].toFixed(1)}" r="2"/>`;
-  s += `<circle class="fg-head" cx="${F.c}" cy="9.5" r="5.3"/>`;
+  s += fline([F.c,18],[F.c,46],"fg-body");
+  s += fpoly([[F.c-7,GROUND],[F.c-5,47],[F.c+5,47],[F.c+7,GROUND]], "fg-limb");
+  s += fpoly([F.wL,F.eL,F.sL,F.sR,F.eR,F.wR], "fg-limb");
+  s += `<circle class="fg-head" cx="${F.c}" cy="9.5" r="5.8"/>`;
   return s;
 }
 const lerp = (a,b,t)=>a+(b-a)*t;
@@ -101,8 +97,18 @@ function figureFrame(fig, t, opt={}){
   }
   const body = F ? fbodyFront(F) : fbody(J);
   if(opt.bodyOnly) return body + front;
-  const ground = fig.noGround ? "" : `<line class="fg-ground" x1="-80" y1="${GROUND+1.5}" x2="200" y2="${GROUND+1.5}"/>`;
+  const ground = fig.noGround ? "" : groundSVG(fig);
   return `${ground}${back}${body}${front}`;
+}
+function groundSVG(fig){
+  if(!fig._g){
+    let x0 = 1e9, x1 = -1e9;
+    for(const t of [0,1]){ const {F, J} = figJoints(fig, t); const pts = F ? [[F.c-12,0],[F.c+12,0]] : Object.values(J).filter(Array.isArray);
+      for(const q of pts){ x0 = Math.min(x0, q[0]); x1 = Math.max(x1, q[0]); } }
+    fig._g = [x0-7, x1+7];
+  }
+  const [a, b] = fig._g;
+  return `<ellipse class="fg-ground" cx="${((a+b)/2).toFixed(1)}" cy="${GROUND+2.6}" rx="${((b-a)/2).toFixed(1)}" ry="2.6"/>`;
 }
 /* Inquadratura: ogni figura riempie il riquadro (4:3) con tutto il movimento dentro */
 const FIT = {};
@@ -185,20 +191,21 @@ function figSVG(key, label){
   return `<svg class="fig" viewBox="${fitBox(key)}" data-fig="${key}" role="img" aria-label="Esecuzione: ${label}">${ghost}<g class="fg-live">${figureFrame(f,0)}</g></svg>`;
 }
 const REDUCED = (()=>{ try{ return matchMedia("(prefers-reduced-motion: reduce)").matches; }catch(e){ return false; } })();
-/* Animazione lenta, da stretching: 2 s per andare, 1 s di pausa, 2 s per tornare */
+/* Animazione a respiro: avanti e indietro senza scatti, 7 s per ciclo (3,5 s per andare, 3,5 per tornare) */
 (function animateFigures(){
   if(REDUCED || typeof requestAnimationFrame==="undefined") return;
-  const ease = x => x<.5 ? 2*x*x : 1-Math.pow(-2*x+2,2)/2;
   let last = 0;
   function frame(now){
     requestAnimationFrame(frame);
     if(now - last < 40) return; last = now;
-    const c = now % 5600;
-    const t = c < 400 ? 0 : c < 2400 ? ease((c-400)/2000) : c < 3400 ? 1 : c < 5400 ? 1-ease((c-3400)/2000) : 0;
+    const t = (1 - Math.cos(2*Math.PI*(now % 7000)/7000)) / 2;
     document.querySelectorAll("svg.fig[data-fig]").forEach(svg=>{
-      const f = FIG[svg.dataset.fig], g = svg.querySelector(".fg-live");
-      if(f && f.B && g && svg.getBoundingClientRect().bottom > 0 && svg.getBoundingClientRect().top < innerHeight) g.innerHTML = figureFrame(f, t);
+      const f = FIG[svg.dataset.fig], g = svg.querySelector(".fg-live"); if(!f || !f.B || !g) return;
+      const r = svg.getBoundingClientRect(); if(r.bottom < 0 || r.top > innerHeight) return;
+      g.innerHTML = figureFrame(f, t);
     });
   }
   requestAnimationFrame(frame);
 })();
+/* fase del respiro (0-1) per l'anello del player */
+const breathPhase = () => (1 - Math.cos(2*Math.PI*(performance.now() % 7000)/7000)) / 2;

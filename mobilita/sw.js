@@ -1,6 +1,6 @@
 // Service worker di Mobilità: tiene l'app disponibile offline.
 // VERSION viene sostituita da build.mjs a ogni build: cambia la cache e fa partire l'aggiornamento.
-const VERSION = "4522ecf71604";
+const VERSION = "c8473b2ba793";
 const CACHE = "mobilita-" + VERSION;
 const SHELL = [
   "./",
@@ -12,11 +12,11 @@ const SHELL = [
   "icons/icon-192.png",
   "icons/icon-512.png",
   "icons/icon-maskable-512.png",
-  "../fonts/barlow-400.woff2",
-  "../fonts/barlow-500.woff2",
-  "../fonts/barlow-600.woff2",
-  "../fonts/barlow-condensed-600.woff2",
-  "../fonts/barlow-condensed-700.woff2",
+  "fonts/fraunces-latin-400-normal.woff2",
+  "fonts/fraunces-latin-600-normal.woff2",
+  "fonts/nunito-latin-400-normal.woff2",
+  "fonts/nunito-latin-600-normal.woff2",
+  "fonts/nunito-latin-700-normal.woff2",
 ];
 
 self.addEventListener("install", (event) => {

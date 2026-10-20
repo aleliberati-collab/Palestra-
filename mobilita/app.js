@@ -363,6 +363,11 @@ let wakeLock = null;
 async function keepAwake(){ if(wakeLock) return; try{ wakeLock = await navigator.wakeLock?.request("screen"); wakeLock?.addEventListener?.("release", ()=>{ wakeLock = null; }); }catch(e){ wakeLock = null; } }
 document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible" && !$("player").hidden) keepAwake(); });
 
+/* il disco dietro la figura si allarga e si stringe a ritmo di respiro (7 s) */
+(function breathe(){
+  const g = $("pGlow");
+  (function f(){ requestAnimationFrame(f); if($("player").hidden) return; g.setAttribute("r", (80 + 8*breathPhase()).toFixed(1)); })();
+})();
 function startSession(){
   pl.rid = state.rid; pl.lvl = currentLevel(); pl.steps = buildSteps(pl.rid, pl.lvl);
   pl.startedAt = Date.now(); pl.doneSecs = 0;
@@ -398,13 +403,14 @@ function show(){
   $("pProg").style.width = (100*pl.i/(pl.steps.length-1||1))+"%";
   const ph = $("pPhase");
   ph.className = "p-phase " + (st.ph==="go" ? it.kind : "prep");
-  ph.textContent = st.ph==="prep" ? "Preparati" : st.ph==="switch" ? "Cambia lato" : it.kind==="stat" ? "Tieni" : "Muoviti";
+  ph.textContent = st.ph==="prep" ? "In posizione" : st.ph==="switch" ? "Cambia lato" : it.kind==="stat" ? "Respira e tieni" : "Muoviti piano";
   $("pName").textContent = it.n;
-  $("pSide").textContent = st.side ? `Lato ${st.side}` : "";
+  $("pSide").textContent = st.side ? `lato ${st.side}` : "";
   if($("pFig").dataset.k !== it.fig){ $("pFig").dataset.k = it.fig; $("pFig").innerHTML = figSVG(it.fig, it.n); }
-  $("pSec").textContent = pl.left;
-  const bar = $("pBar"); bar.parentElement.className = "p-bar" + (it.kind==="stat" && st.ph==="go" ? " stat" : "");
-  bar.style.width = (100*(1 - pl.left/st.s))+"%";
+  $("pSec").innerHTML = `${pl.left}<small>${st.ph==="go" ? (it.kind==="stat" ? "respira e tieni" : "secondi") : st.ph==="switch" ? "cambia lato" : "si parte tra"}</small>`;
+  const holding = st.ph==="go" && it.kind==="stat";
+  $("player").classList.toggle("stat", holding);
+  $("pArc").style.strokeDashoffset = (590.6 * (pl.left/st.s)).toFixed(1);
   $("pCue").textContent = st.ph==="go" ? `${itemDose(it, pl.lvl)}. ${it.c}` : it.c;
   $("pNext").textContent = nextIt ? `Poi: ${nextIt.n}` : "Ultimo esercizio";
   $("pPause").textContent = pl.running ? "Pausa" : "Riprendi";

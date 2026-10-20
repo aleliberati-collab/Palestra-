@@ -11,4 +11,4 @@ function build(dir, files) {
   console.log((dir || "./") + "sw.js versione", version);
 }
 build("", ["index.html", "style.css", "store.js", "app.js", "manifest.webmanifest", ...fonts]);
-build("mobilita/", ["index.html", "style.css", "fig.js", "app.js", "manifest.webmanifest", ...fonts.map((f) => "../" + f)]);
+build("mobilita/", ["index.html", "style.css", "fig.js", "app.js", "manifest.webmanifest", ...readdirSync("mobilita/fonts").filter((f) => f.endsWith(".woff2")).map((f) => "fonts/" + f)]);
