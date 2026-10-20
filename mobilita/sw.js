@@ -1,6 +1,6 @@
 // Service worker di Mobilità: tiene l'app disponibile offline.
 // VERSION viene sostituita da build.mjs a ogni build: cambia la cache e fa partire l'aggiornamento.
-const VERSION = "c8473b2ba793";
+const VERSION = "606fadcc6e5a";
 const CACHE = "mobilita-" + VERSION;
 const SHELL = [
   "./",

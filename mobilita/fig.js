@@ -19,13 +19,15 @@ function fsolve(p){
 }
 /* vista frontale: a = abduzione braccio (0 giù, 90 orizzontale), b = piega avambraccio */
 function fsolveFront(p){
-  const c=60, sL=[51,21], sR=[69,21], k=p.k ?? 1;   // k < 1 = braccia in avanti, accorciate dalla prospettiva
+  // dy abbassa il busto (da seduti), seat = quanto stanno alte le ginocchia aperte di lato
+  const c=60, dy=p.dy||0, sL=[51,21+dy], sR=[69,21+dy], k=p.k ?? 1;   // k < 1 = braccia in avanti, accorciate dalla prospettiva
   const UA=FL.UA*k, FA=FL.FA*k;
   const eL=[sL[0]-UA*Math.sin(p.a*Math.PI/180), sL[1]+UA*Math.cos(p.a*Math.PI/180)];
-  const eR=[sR[0]+UA*Math.sin(p.a*Math.PI/180), sR[1]+UA*Math.cos(p.a*Math.PI/180)];
-  const fb=(p.a+(p.b||0))*Math.PI/180;
-  const wL=[eL[0]-FA*Math.sin(fb), eL[1]+FA*Math.cos(fb)], wR=[eR[0]+FA*Math.sin(fb), eR[1]+FA*Math.cos(fb)];
-  return {c, sL, sR, eL, eR, wL, wR};
+  const a2 = p.a2 ?? p.a, b2 = p.b2 ?? p.b;   // a2/b2: braccio destro diverso dal sinistro
+  const eR=[sR[0]+UA*Math.sin(a2*Math.PI/180), sR[1]+UA*Math.cos(a2*Math.PI/180)];
+  const fb=(p.a+(p.b||0))*Math.PI/180, fb2=(a2+(b2||0))*Math.PI/180;
+  const wL=[eL[0]-FA*Math.sin(fb), eL[1]+FA*Math.cos(fb)], wR=[eR[0]+FA*Math.sin(fb2), eR[1]+FA*Math.cos(fb2)];
+  return {c, dy, seat:p.seat, sL, sR, eL, eR, wL, wR};
 }
 const P = (pts)=>pts.map(q=>q.map(v=>v.toFixed(1)).join(",")).join(" ");
 function fline(a,b,cls){ return `<line class="${cls}" x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}"/>`; }
@@ -62,11 +64,14 @@ function fbody(J){
   return s;
 }
 function fbodyFront(F){
-  let s = "";
-  s += fline([F.c,18],[F.c,46],"fg-body");
-  s += fpoly([[F.c-7,GROUND],[F.c-5,47],[F.c+5,47],[F.c+7,GROUND]], "fg-limb");
+  let s = "", d = F.dy||0, H = 47+d;
+  s += fline([F.c,18+d],[F.c,H-1],"fg-body");
+  if(F.seat != null){ // seduto, gambe a farfalla: ginocchia aperte, piante unite davanti al bacino
+    const kx = 21, ky = H - F.seat;
+    s += fpoly([[F.c-2,H+5],[F.c-kx,ky],[F.c-5,H],[F.c+5,H],[F.c+kx,ky],[F.c+2,H+5]], "fg-limb");
+  } else s += fpoly([[F.c-7,GROUND],[F.c-5,H],[F.c+5,H],[F.c+7,GROUND]], "fg-limb");
   s += fpoly([F.wL,F.eL,F.sL,F.sR,F.eR,F.wR], "fg-limb");
-  s += `<circle class="fg-head" cx="${F.c}" cy="9.5" r="5.8"/>`;
+  s += `<circle class="fg-head" cx="${F.c}" cy="${9.5+d}" r="5.8"/>`;
   return s;
 }
 const lerp = (a,b,t)=>a+(b-a)*t;
@@ -103,7 +108,7 @@ function figureFrame(fig, t, opt={}){
 function groundSVG(fig){
   if(!fig._g){
     let x0 = 1e9, x1 = -1e9;
-    for(const t of [0,1]){ const {F, J} = figJoints(fig, t); const pts = F ? [[F.c-12,0],[F.c+12,0]] : Object.values(J).filter(Array.isArray);
+    for(const t of [0,1]){ const {F, J} = figJoints(fig, t); const pts = F ? (F.seat!=null ? [[F.c-22,0],[F.c+22,0]] : [[F.c-12,0],[F.c+12,0]]) : Object.values(J).filter(Array.isArray);
       for(const q of pts){ x0 = Math.min(x0, q[0]); x1 = Math.max(x1, q[0]); } }
     fig._g = [x0-7, x1+7];
   }
@@ -118,7 +123,7 @@ function fitBox(key){
   const add = (x,y,r=0)=>{ x0=Math.min(x0,x-r); y0=Math.min(y0,y-r); x1=Math.max(x1,x+r); y1=Math.max(y1,y+r); };
   for(const t of [0,.25,.5,.75,1]){
     const {F, J} = figJoints(f, t);
-    if(F){ [F.sL,F.sR,F.eL,F.eR,F.wL,F.wR].forEach(q=>add(q[0],q[1],3)); add(F.c,4); add(F.c-8,GROUND); add(F.c+8,GROUND); }
+    if(F){ [F.sL,F.sR,F.eL,F.eR,F.wL,F.wR].forEach(q=>add(q[0],q[1],3)); add(F.c,4+(F.dy||0)); add(F.c-26,GROUND); add(F.c+26,GROUND); }
     else { for(const k of ["hip","neck","sho","knee","ank","toe","knee2","ank2","toe2","elb","wr","elb2","wr2"]) add(J[k][0], J[k][1], 2.5); add(J.head[0], J.head[1], 5.8); }
     for(const e of f.eq||[]){
       const at = e.at==="both" ? null : e.at && J[e.at];
@@ -161,26 +166,26 @@ const FIG = {
   cat_cow:{A:{...QUAD, arch:-9, hd:45}, B:{...QUAD, arch:7, hd:-55}, eq:[]},
   bridge:{A:{hip:[52,79], t:-90, th:45, sh:180, ft:90, ua:90, fa:90}, B:{hip:[50,64], t:-118, th:95, sh:180, ft:90, ua:100, fa:90}, eq:[]},
   bw_squat:{A:S({ua:90, fa:90}), B:S({t:38, th:98, sh:205, ua:80, fa:80}), eq:[]},
-  knee_wall:{A:{foot:[80,GROUND], t:6, th:178, sh:180, th2:202, sh2:192, ft2:150, ua:72, fa:84}, B:{foot:[80,GROUND], t:10, th:160, sh:208, th2:202, sh2:192, ft2:150, ua:66, fa:80}, eq:[WALL_R]},
+  knee_wall:{A:{foot:[78,GROUND], t:8, th:180, sh:180, ft:90, th2:206, sh2:214, ft2:140, ua:76, fa:84}, B:{foot:[78,GROUND], t:14, th:164, sh:210, ft:90, th2:208, sh2:216, ft2:140, ua:70, fa:80}, eq:[WALL_R]},
   wgs:{A:{foot:[84,GROUND], t:62, th:96, sh:186, th2:244, sh2:256, ft2:180, ua:182, fa:182}, B:{foot:[84,GROUND], t:58, th:96, sh:186, th2:244, sh2:256, ft2:180, ua:-4, fa:-4, ua2:182, fa2:182}, eq:[]},
   hinge:{A:S({ua:180, fa:180}), B:{foot:[60,GROUND], t:76, th:160, sh:184, ua:182, fa:182}, eq:[]},
-  deep_squat:{A:S({t:36, th:82, sh:212, ua:96, fa:70}), B:S({t:30, th:72, sh:216, ua:98, fa:64}), eq:[]},
+  deep_squat:{A:S({t:28, th:100, sh:205, ua:120, fa:40}), B:S({t:14, th:70, sh:215, ua:150, fa:30}), eq:[]},
   hip_flexor:{A:{hip:[56,63], t:0, th:90, sh:180, ft:90, th2:180, sh2:270, ft2:270, ua:180, fa:180}, B:{hip:[61,64], t:-8, th:98, sh:182, ft:90, th2:194, sh2:270, ft2:270, ua:2, fa:0, ua2:180, fa2:180}, eq:[]},
   ham_band:{A:{...SUP, th:22, sh:22, ft:-40, th2:90, sh2:90, ft2:0, ua:36, fa:30}, B:{...SUP, th:4, sh:4, ft:-60, th2:90, sh2:90, ft2:0, ua:22, fa:16}, eq:[{k:"band", fromJ:"ank", at:"wr"}]},
-  fig4:{A:{...SUP, th:38, sh:150, ft:90, th2:20, sh2:96, ft2:20, ua:40, fa:80}, B:{...SUP, th:20, sh:140, ft:90, th2:6, sh2:92, ft2:20, ua:28, fa:70}, eq:[]},
-  butterfly:{A:{hip:[50,80], t:24, th:60, sh:220, ft:120, ua:150, fa:176}, B:{hip:[50,80], t:46, th:62, sh:222, ft:120, ua:140, fa:170}, eq:[]},
+  fig4:{A:{...SUP, th:45, sh:-70, ft:-20, th2:-8, sh2:82, ft2:20, ua:46, fa:72}, B:{...SUP, th:32, sh:-88, ft:-20, th2:-26, sh2:66, ft2:20, ua:40, fa:62}, eq:[]},
+  butterfly:{front:true, A:{dy:30, seat:14, a:14, b:-16}, B:{dy:32, seat:5, a:24, b:-30}, eq:[]},
   calf_wall:{A:{foot:[70,GROUND], t:30, th:160, sh:190, ft:90, th2:204, sh2:206, ft2:110, ua:62, fa:68}, B:{foot:[70,GROUND], t:36, th:150, sh:196, ft:90, th2:206, sh2:208, ft2:110, ua:66, fa:70}, eq:[WALL_R]},
-  quad_stand:{A:S({th2:186, sh2:340, ft2:300, ua:150, fa:150, ua2:200, fa2:200}), B:S({th2:194, sh2:350, ft2:300, ua:140, fa:140, ua2:206, fa2:196}), eq:[]},
+  quad_stand:{A:{hip:[60,44], t:0, th:186, sh:345, ft:300, th2:180, sh2:180, ft2:90, ua:195, fa:200, ua2:130, fa2:120}, B:{hip:[60,44], t:-2, th:198, sh:350, ft:300, th2:180, sh2:180, ft2:90, ua:200, fa:206, ua2:128, fa2:118}, eq:[]},
   child:{A:{hip:[40,66], t:104, th:140, sh:270, ft:270, ua:98, fa:94, hd:8}, B:{hip:[38,68], t:110, th:146, sh:270, ft:270, ua:100, fa:96, hd:8}, eq:[]},
-  disloc:{A:S({ua:160, fa:160}), B:S({ua:-28, fa:-28}), eq:[]},
+  disloc:{front:true, A:{a:28, b:0}, B:{a:172, b:0}, eq:[{k:"band", fromJ:"wL", at:"wR"}]},
   pull_apart:{front:true, A:{a:-90, b:0, k:.22}, B:{a:90, b:0, k:1}, eq:[{k:"band", fromJ:"wL", at:"wR"}]},
   open_book:{noGround:true, A:{hip:[74,48], t:-90, th:180, sh:90, ft:0, ua:180, fa:180}, B:{hip:[74,48], t:-90, th:180, sh:90, ft:0, ua:0, fa:0, ua2:180, fa2:180}, eq:[{k:"mat", x:12, y:16, w:96, h:66}]},
   tspine:{A:{...QUAD}, B:{...QUAD, ua:-2, fa:-2, ua2:180, fa2:180, hd:-40}, eq:[]},
   wall_angel:{front:true, A:{a:84, b:92}, B:{a:150, b:10}, eq:[]},
-  pec_wall:{A:S({t:6, ua:-88, fa:-4}), B:S({t:14, ua:-96, fa:-8}), eq:[{k:"wall", x:40, y:6, w:5, h:79}]},
+  pec_wall:{front:true, A:{a:86, b:84, a2:10, b2:0}, B:{a:92, b:96, a2:10, b2:0}, eq:[{k:"wall", x:29, y:2, w:5, h:83}]},
   lat_chair:{A:{knee:[36,GROUND-1], th:180, sh:270, ft:270, t:90, ua:88, fa:88, hd:20}, B:{knee:[36,GROUND-1], th:172, sh:270, ft:270, t:102, ua:80, fa:80, hd:20}, eq:CHAIR},
   sphinx:{A:{hip:[42,80], t:72, th:-90, sh:-90, ft:-100, ua:180, fa:90}, B:{hip:[42,80], t:60, th:-90, sh:-90, ft:-100, ua:178, fa:90}, eq:[]},
-  knees_chest:{A:{...SUP, th:40, sh:120, ft:90, ua:40, fa:90}, B:{...SUP, th:12, sh:110, ft:90, ua:26, fa:84}, eq:[]},
+  knees_chest:{A:{...SUP, th:10, sh:100, ft:60, ua:50, fa:70}, B:{...SUP, th:-45, sh:45, ft:20, ua:30, fa:50}, eq:[]},
   breath:{A:{...SUP, th:45, sh:150, ft:90, ua:76, fa:120}, B:{...SUP, th:45, sh:150, ft:90, ua:72, fa:116, arch:-2}, eq:[]}
 };
 

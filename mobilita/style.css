@@ -175,6 +175,7 @@ textarea{width:100%;min-height:64px;font:400 15px var(--f-body);color:var(--ink)
 
 /* figure: tratto pieno e arrotondato, colori salvia */
 svg.fig polyline,svg.fig line,svg.fig path{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.fg-body,.fg-limb,.fg-far{fill:none;stroke-linecap:round;stroke-linejoin:round}
 .fg-body{stroke:var(--fig);stroke-width:7}
 .fg-limb{stroke:var(--fig);stroke-width:5}
 .fg-far{stroke:var(--fig-far);stroke-width:4.6}
@@ -185,7 +186,7 @@ svg.fig polyline,svg.fig line,svg.fig path{fill:none;stroke-linecap:round;stroke
 .fg-ground{fill:var(--fig);opacity:.1}
 .fg-ghost{opacity:.12}
 .fg-wall{fill:var(--fig-far);opacity:.45}
-.fg-mat{fill:var(--surface);opacity:.6}
+.fg-mat{fill:var(--fig);opacity:.06}
 .p-fig .fg-ghost{opacity:.1}
 
 .update-bar{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;justify-content:center;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));pointer-events:none}
