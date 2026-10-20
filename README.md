@@ -1,6 +1,6 @@
 # Palestra A&V
 
-Scheda full body in 3 giorni per due persone, come app installabile e offline (PWA): carichi suggeriti dal coach, periodizzazione a blocchi, mobilità guidata, progressi.
+Scheda full body in 3 giorni per due persone, come app installabile e offline (PWA): carichi suggeriti dal coach, periodizzazione a blocchi, core, progressi. Stretching e mobilità sono nell'app a parte [Mobilità A&V](mobilita/) (cartella `mobilita/`).
 
 - **Offline:** dopo la prima apertura funziona senza rete.
 - **Dati sul telefono:** le sedute restano nel browser del telefono. Backup: *Progressi → Backup su Drive* (cartella Claude/Palestra), ripristino con *Importa backup*.
@@ -11,5 +11,6 @@ Scheda full body in 3 giorni per due persone, come app installabile e offline (P
 |---|---|
 | `index.html`, `style.css` | pagina e stile |
 | `app.js` | programma, coach, figure animate, progressi |
+| `mobilita/` | app separata per stretching e mobilità del weekend |
 | `store.js` | archivio locale, backup, condivisione file |
 | `sw.js.template` → `sw.js` | service worker per l'uso offline |

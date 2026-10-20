@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Mobilità A&amp;V</title>
+<meta name="description" content="Stretching, flessibilità e mobilità del weekend, guidati e offline." />
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#edf1ef" />
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f1413" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<link rel="preload" href="../fonts/barlow-condensed-700.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="wrap">
+  <header class="bar">
+    <div class="brand">
+      <h1>Mobilità <span>A&amp;V</span></h1>
+      <span class="week" id="weekTag"></span>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-view="sess" aria-selected="true">Sessione</button>
+      <button role="tab" data-view="test" aria-selected="false">Test</button>
+      <button role="tab" data-view="hist" aria-selected="false">Storico</button>
+    </nav>
+  </header>
+  <div id="banner" class="banner" hidden></div>
+  <main id="main"></main>
+</div>
+
+<div class="dock" id="dock">
+  <div class="in">
+    <div class="msg" id="dockMsg"></div>
+    <button class="btn" id="startBtn">Inizia</button>
+  </div>
+</div>
+
+<!-- Sessione guidata a tutto schermo -->
+<div class="player" id="player" hidden role="dialog" aria-modal="true" aria-label="Sessione guidata">
+  <div class="p-in">
+    <div class="p-top"><span id="pStep"></span><span id="pBlock"></span></div>
+    <div class="p-prog"><i id="pProg"></i></div>
+    <div class="p-phase" id="pPhase"></div>
+    <div class="p-name" id="pName"></div>
+    <div class="p-side" id="pSide"></div>
+    <div class="p-fig" id="pFig"></div>
+    <div class="p-sec num" id="pSec" aria-live="off"></div>
+    <div class="p-bar"><i id="pBar"></i></div>
+    <div class="p-cue" id="pCue"></div>
+    <div class="p-next" id="pNext"></div>
+    <div class="p-ctl">
+      <button id="pBack" aria-label="Esercizio precedente">‹</button>
+      <button class="pri" id="pPause">Pausa</button>
+      <button id="pSkip" aria-label="Esercizio successivo">›</button>
+    </div>
+    <button class="p-close" id="pClose">Chiudi</button>
+  </div>
+</div>
+
+<!-- Fine sessione -->
+<div class="sheet" id="finish" hidden role="dialog" aria-modal="true" aria-labelledby="fTitle">
+  <div class="s-in">
+    <h2 id="fTitle">Sessione finita</h2>
+    <p class="s-sub" id="fSub"></p>
+    <div class="s-q">Chi l'ha fatta</div>
+    <div class="choice" id="fWho"></div>
+    <div class="s-q">Come vi sentite adesso</div>
+    <div class="choice" id="fFeel">
+      <button data-feel="1">Ancora rigidi</button><button data-feel="2" aria-pressed="true">Normale</button><button data-feel="3">Sciolti</button>
+    </div>
+    <label class="s-q" for="fNote">Note</label>
+    <textarea id="fNote" placeholder="Es. femorale sinistro più rigido del destro"></textarea>
+    <div class="s-act"><button class="ghost" id="fCancel">Non salvare</button><button class="btn" id="fSave">Salva sessione</button></div>
+  </div>
+</div>
+
+<div class="update-bar" id="update-bar" hidden>
+  <div class="inner"><span>Nuova versione pronta</span><button type="button" id="update-btn">Aggiorna</button></div>
+</div>
+<script src="fig.js"></script>
+<script src="app.js"></script>
+<script>
+if (navigator.storage && navigator.storage.persist) {
+  navigator.storage.persisted().then(function (p) { if (!p) navigator.storage.persist(); }).catch(function () {});
+}
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("sw.js").then(function (reg) {
+      var bar = document.getElementById("update-bar");
+      var show = function (w) { bar.hidden = false; document.getElementById("update-btn").onclick = function () { w.postMessage("skipWaiting"); }; };
+      if (reg.waiting && navigator.serviceWorker.controller) show(reg.waiting);
+      reg.addEventListener("updatefound", function () {
+        var w = reg.installing; if (!w) return;
+        w.addEventListener("statechange", function () { if (w.state === "installed" && navigator.serviceWorker.controller) show(w); });
+      });
+      document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") reg.update().catch(function () {}); });
+    }).catch(function () {});
+    var reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", function () { if (reloaded) return; reloaded = true; location.reload(); });
+  });
+}
+</script>
+</body>
+</html>

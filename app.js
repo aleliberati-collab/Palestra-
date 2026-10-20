@@ -79,33 +79,6 @@ const DAYS = {
   ]}
 };
 
-/* Riscaldamento: 5 minuti, propedeutico ai fondamentali del giorno */
-const WARMUP = {
-  lun:{focus:"Prepara squat e panca: caviglie, anche, torace e spalle", drills:[
-    {n:"Open book a terra", fig:"m_open_book", d:"6 per lato", s:50, c:"Sul fianco, ginocchia a 90°: ruota il torace e apri il braccio, segui la mano con lo sguardo."},
-    {n:"Band pull-apart", fig:"m_pull_apart", d:"15 rip", s:35, c:"Elastico all'altezza del petto, braccia tese: apri fino a toccare lo sterno, scapole indietro e in basso."},
-    {n:"Dislocazioni con elastico", fig:"m_disloc", d:"10 rip", s:35, c:"Presa larga, porta l'elastico da davanti a dietro la testa senza piegare i gomiti."},
-    {n:"Ginocchio al muro (caviglia)", fig:"m_knee_wall", d:"10 per lato", s:60, c:"Piede a una spanna dal muro, porta il ginocchio a toccarlo senza staccare il tallone."},
-    {n:"Ponte glutei con elastico", fig:"m_bridge", d:"12 rip", s:40, c:"Elastico sopra le ginocchia, spingi le ginocchia in fuori e stringi i glutei in alto per 2 secondi."},
-    {n:"Squat a corpo libero lento", fig:"m_bw_squat", d:"8 rip, 3 s in discesa", s:45, c:"Petto alto, ginocchia in linea con le punte. Fermati 2 secondi in basso e spingi le ginocchia in fuori con i gomiti."},
-    {n:"Push-up scapolari", fig:"m_scap_pushup", d:"10 rip", s:35, c:"In plank a braccia tese, avvicina e allontana le scapole senza piegare i gomiti."}]},
-  mer:{focus:"Prepara stacco, military e trazioni: catena posteriore, anche e spalle sopra la testa", drills:[
-    {n:"Cat-cow", fig:"m_cat_cow", d:"8 rip lente", s:40, c:"A quattro zampe: inarca e arrotonda la schiena una vertebra alla volta."},
-    {n:"Good morning con elastico", fig:"m_gm_band", d:"12 rip", s:40, c:"Elastico sotto i piedi e dietro il collo, ginocchia morbide: spingi il bacino indietro con la schiena neutra."},
-    {n:"Affondo con allungamento flessori dell'anca", fig:"m_hip_flexor", d:"30 s per lato", s:60, c:"Ginocchio dietro a terra, stringi il gluteo e porta il bacino avanti, braccio in alto."},
-    {n:"Face pull con elastico", fig:"m_facepull_band", d:"15 rip", s:35, c:"Tira verso la fronte aprendo i gomiti, chiudi con i pollici che puntano indietro."},
-    {n:"Y-raise con elastico", fig:"m_y_raise", d:"12 rip", s:35, c:"Braccia a Y sopra la testa, costole giù: senti la parte bassa delle scapole."},
-    {n:"Appeso alla sbarra", fig:"m_dead_hang", d:"30 s", s:30, c:"Presa salda, spalle lontane dalle orecchie, poi lasciati allungare."},
-    {n:"Bird dog", fig:"bird_dog", d:"5 per lato, 2 s di pausa", s:60, c:"Braccio e gamba opposti tesi, bacino fermo come se avessi un bicchiere sulla schiena."}]},
-  ven:{focus:"Prepara panca inclinata, stacco rumeno e rematori: torace, femorali e cuffia dei rotatori", drills:[
-    {n:"World's greatest stretch", fig:"m_wgs", d:"4 per lato", s:60, c:"Affondo lungo, gomito verso la caviglia, poi ruota e apri il braccio verso il soffitto."},
-    {n:"Rotazioni esterne con elastico", fig:"m_ext_rot", d:"12 per lato", s:45, c:"Gomito al fianco a 90°, ruota l'avambraccio verso l'esterno lentamente."},
-    {n:"Band pull-apart presa inversa", fig:"m_pull_apart", d:"15 rip", s:35, c:"Palmi in su, apri fino al petto e tieni 1 secondo."},
-    {n:"Stacco rumeno con elastico", fig:"m_rdl_band", d:"12 rip", s:40, c:"Elastico sotto i piedi, spingi il bacino indietro fino a sentire i femorali, poi chiudi stringendo i glutei."},
-    {n:"Ginocchio al muro (caviglia)", fig:"m_knee_wall", d:"8 per lato", s:45, c:"Tallone a terra, ginocchio verso il muro, piccolo passo indietro quando diventa facile."},
-    {n:"Open book a terra", fig:"m_open_book", d:"5 per lato", s:45, c:"Respira a fondo quando sei in apertura."},
-    {n:"Goblet squat leggero con pausa", fig:"goblet", d:"6 rip", s:30, c:"Kettlebell leggera, 3 secondi fermo in basso con i gomiti che spingono le ginocchia in fuori."}]}
-};
 /* Circuito core opzionale: 3 esercizi, giri crescenti con i blocchi */
 const CORE = {
   lun:{name:"Anti-estensione e anti-rotazione", ex:[
@@ -382,28 +355,6 @@ FIG.plank_rkc = FIG.plank;
 // esercizi in cui da A a B il peso scende: quella fase va lenta
 for(const k of ["squat","front_squat","goblet","split_bil","affondi","bulgaro","panca","panca_stretta","french","inclinata","inclinata_bil","rdl","rdl_man","good_morning"]) FIG[k].eccAB = true;
 
-/* ===== Mobilità: posizione di inizio (A) e di fine (B) ===== */
-Object.assign(FIG, {
-  m_open_book:{noGround:true, A:{hip:[74,48], t:-90, th:180, sh:90, ft:0, ua:180, fa:180}, B:{hip:[74,48], t:-90, th:180, sh:90, ft:0, ua:0, fa:0, ua2:180, fa2:180},
-    eq:[{k:"mat", x:12, y:16, w:96, h:66}]}, // vista dall'alto, sdraiato sul fianco
-  m_pull_apart:{front:true, A:{a:-90, b:0, k:.22}, B:{a:90, b:0, k:1}, eq:[{k:"band", fromJ:"wL", at:"wR"}]},
-  m_disloc:{A:S({ua:160, fa:160}), B:S({ua:-28, fa:-28}), eq:[]},
-  m_knee_wall:{A:{foot:[80,GROUND], t:6, th:178, sh:180, th2:202, sh2:192, ft2:150, ua:72, fa:84}, B:{foot:[80,GROUND], t:10, th:160, sh:208, th2:202, sh2:192, ft2:150, ua:66, fa:80},
-    eq:[{k:"wall", x:93, y:24, w:5, h:61}]},
-  m_bridge:{A:{hip:[52,79], t:-90, th:45, sh:180, ft:90, ua:90, fa:90}, B:{hip:[50,64], t:-118, th:95, sh:180, ft:90, ua:100, fa:90}, eq:[{k:"band", fromJ:"knee", at:"knee2"}]},
-  m_bw_squat:{A:S({ua:90, fa:90}), B:S({t:38, th:98, sh:205, ua:80, fa:80}), eq:[]},
-  m_scap_pushup:{A:{hip:[60,65.6], t:-67.5, th:112.5, sh:112.5, ft:150, ua:180, fa:180}, B:{hip:[60,63.8], t:-69, th:112, sh:112, ft:150, ua:182, fa:182}, eq:[]},
-  m_cat_cow:{A:{knee:[44,83], th:180, sh:270, ft:270, t:74, ua:180, fa:180, arch:-9, hd:45}, B:{knee:[44,83], th:180, sh:270, ft:270, t:74, ua:180, fa:180, arch:7, hd:-55}, eq:[]},
-  m_gm_band:{A:S({ua:205, fa:25}), B:{foot:[60,GROUND], t:72, th:162, sh:184, ua:250, fa:60}, eq:[{k:"band", fromJ:"ank", at:"neck"}]},
-  m_hip_flexor:{A:{hip:[56,63], t:0, th:90, sh:180, ft:90, th2:180, sh2:270, ft2:270, ua:180, fa:180}, B:{hip:[61,64], t:-8, th:98, sh:182, ft:90, th2:194, sh2:270, ft2:270, ua:2, fa:0, ua2:180, fa2:180}, eq:[]},
-  m_facepull_band:{A:S({t:-6, ua:82, fa:86}), B:S({t:-6, ua:262, fa:8}), eq:[{k:"band", from:[106,24], at:"wr"}]},
-  m_y_raise:{front:true, A:{a:20, b:0}, B:{a:150, b:0}, eq:[]},
-  m_dead_hang:{A:hangA, eq:[PULL_BAR], noGround:true},
-  m_wgs:{A:{foot:[84,GROUND], t:62, th:96, sh:186, th2:244, sh2:256, ft2:180, ua:182, fa:182}, B:{foot:[84,GROUND], t:58, th:96, sh:186, th2:244, sh2:256, ft2:180, ua:-4, fa:-4, ua2:182, fa2:182}, eq:[]},
-  m_ext_rot:{front:true, A:{a:0, b:-60}, B:{a:0, b:90}, eq:[]},
-  m_rdl_band:{A:S({}), B:{foot:[60,GROUND], t:76, th:158, sh:184, ua:182, fa:182}, eq:[{k:"band", fromJ:"ank", at:"wr"}]}
-});
-
 const VISIBLE = new Set();
 const figIO = (()=>{ try{ return new IntersectionObserver(es=>es.forEach(e=>e.isIntersecting?VISIBLE.add(e.target):VISIBLE.delete(e.target))); }catch(e){ return null; } })();
 function observeFigs(){ VISIBLE.clear(); if(!figIO) return; figIO.disconnect(); document.querySelectorAll("svg.fig[data-fig]").forEach(svg=>figIO.observe(svg)); }
@@ -412,13 +363,6 @@ function figSVG(key, label){
   const f = FIG[key]; if(!f) return "";
   const ghost = f.B ? `<g class="fg-ghost">${figureFrame(f, 1, {bodyOnly:true})}</g>` : "";
   return `<svg class="fig" viewBox="${fitBox(key)}" data-fig="${key}" role="img" aria-label="Esempio di esecuzione: ${esc(label)}">${ghost}${pathSVG(f)}<g class="fg-live">${figureFrame(f,0)}</g></svg>`;
-}
-/* Mobilità: due disegni fermi, posizione di partenza e posizione finale */
-function mobFigs(key){
-  const f = FIG[key]; if(!f) return "";
-  const vb = fitBox(key);
-  const one = (t, l) => `<figure class="mf"><svg class="fig still" viewBox="${vb}" role="img" aria-label="${l}">${figureFrame(f, t)}</svg><figcaption>${l}</figcaption></figure>`;
-  return `<span class="mobfig">${one(0, f.B ? "Inizio" : "Posizione")}${f.B ? `<span class="arr" aria-hidden="true">→</span>${one(1, "Fine")}` : ""}</span>`;
 }
 const videoURL = name => "https://www.youtube.com/results?search_query=" + encodeURIComponent(name + " esecuzione corretta");
 /* Animazione: pausa in A → movimento → pausa in B → ritorno, 3,4 s per ciclo.
@@ -457,7 +401,7 @@ const DRAFT_KEY = "pav-draft";
 let drafts = {};
 try{ drafts = JSON.parse(localStorage.getItem(DRAFT_KEY)||"{}")||{}; const old = Date.now()-4*864e5; for(const k in drafts) if(!(drafts[k]?.at>old)) delete drafts[k]; }catch(e){ drafts = {}; }
 function saveDraft(key, f){
-  if(f && f.touched) drafts[key] = {sets:f.sets, fb:f.fb, rpe:f.rpe, warm:f.warm, core:f.core, note:f.note, swaps:state.swaps[key]||{}, at:Date.now()};
+  if(f && f.touched) drafts[key] = {sets:f.sets, fb:f.fb, rpe:f.rpe, core:f.core, note:f.note, swaps:state.swaps[key]||{}, at:Date.now()};
   else delete drafts[key];
   try{ localStorage.setItem(DRAFT_KEY, JSON.stringify(drafts)); }catch(e){}
 }
@@ -587,7 +531,7 @@ function getForm(){
   const saved = savedDoc(), dr = drafts[key];
   if(!f && dr && (!saved || dr.at > Date.parse(saved.savedAt||0))){
     state.swaps[key] = dr.swaps||{};
-    f = {touched:true, restored:true, saved:!!saved, sets:dr.sets||{}, fb:dr.fb||{}, rpe:dr.rpe ?? null, warm:!!dr.warm, core:dr.core ?? null, note:dr.note||""};
+    f = {touched:true, restored:true, saved:!!saved, sets:dr.sets||{}, fb:dr.fb||{}, rpe:dr.rpe ?? null, core:dr.core ?? null, note:dr.note||""};
     state.forms[key] = f; ensureSets(f); return f;
   }
   const {items} = currentPlanDay();
@@ -599,7 +543,7 @@ function getForm(){
       sets[ex.id]=arr;
     } else sets[ex.id] = freshSets(ex, sc);
   }
-  f = {touched:false, saved:!!saved, sets, fb, rpe:saved?.rpe ?? null, warm:!!saved?.warmup, core:saved?.coreRounds ?? null, note:saved?.note||""}; state.forms[key]=f; return f;
+  f = {touched:false, saved:!!saved, sets, fb, rpe:saved?.rpe ?? null, core:saved?.coreRounds ?? null, note:saved?.note||""}; state.forms[key]=f; return f;
 }
 
 /* ===== Dischi, avvicinamento, record ===== */
@@ -700,12 +644,6 @@ function renderDay(){
   h += `<div class="dayhead"><h2><small>${esc(day.name)} · ${who}</small>${day.label}</h2>
     <div class="row-actions">${badge}<label class="field">Data seduta<input type="date" id="sessDate" value="${state.date}"></label></div></div>
     <div class="live" id="live-stats" aria-live="polite"></div><div class="list">`;
-  const wu = WARMUP[state.view];
-  const warmAll = aths.every(a => forms[a].warm);
-  h += `<section class="block" aria-label="Riscaldamento"><div class="block-top"><span class="ttl">Mobilità · 5 min<small>${esc(wu.focus)}. Servono gli elastici.</small></span><button class="ghost" id="wuStart">Avvia guidato</button></div>
-    <details class="more" id="wuDetails"${state.open.wuDetails?" open":""}><summary>I ${wu.drills.length} esercizi, con posizione di inizio e di fine</summary><ol class="drills">${wu.drills.map(d=>`<li><span class="dn">${esc(d.n)}</span><span class="dd">${esc(d.d)}</span>${mobFigs(d.fig)}<span class="dc">${esc(d.c)}</span></li>`).join("")}</ol></details>
-    <div class="donerow"><span class="q">Fatto?</span><button data-warm="1" aria-pressed="${warmAll}">Mobilità completata</button></div></section>`;
-
   items.forEach((it, idx) => {
     const {ex, sc, slot, si, def} = it;
     const isMain = ex.role.startsWith("main")||ex.role==="hinge";
@@ -758,8 +696,8 @@ function renderDay(){
     <li>Dentro il range: stesso peso, una ripetizione in più.</li>
     <li>Sotto il minimo: ripeti il peso. Se eri al limite scende di uno step; due sedute di fila sotto il minimo, −10%.</li>
     <li>Quando cambia il range di ripetizioni, il peso si ricalcola dal massimale stimato.</li></ul>
-    <b>Mobilità e core</b><ul>
-    <li>I 5 minuti di mobilità preparano le articolazioni ai fondamentali del giorno. Falli sempre, prima delle serie di avvicinamento.</li>
+    <b>Riscaldamento e core</b><ul>
+    <li>Prima dei fondamentali: 5 minuti di cardio leggero (bici o vogatore), poi le serie di avvicinamento. Stretching e mobilità si fanno nel weekend, con l'app Mobilità A&amp;V.</li>
     <li>Il circuito core è opzionale: 2 giri a inizio programma, 3 da metà del primo blocco, 1 in scarico.</li></ul>
     <b>Scarico anticipato</b><ul><li>Se la fatica della seduta resta a 9-10, il coach propone di anticipare lo scarico.</li></ul>
     <b>In sala</b><ul>
@@ -876,18 +814,12 @@ main.addEventListener("click", e=>{
       b.parentElement.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed", String(+x.dataset.rpe===f.rpe))); saveDraft(formKey(), f); });
     updateSaveBar(); return;
   }
-  // mobilità e core: valgono per chi si allena (in coppia, per entrambi)
-  if(b.dataset.warm){
-    const aths = athletesNow(), next = !aths.every(x => withAth(x, ()=>getForm().warm));
-    for(const x of aths) withAth(x, ()=>{ const f = getForm(); f.touched=true; f.warm=next; saveDraft(formKey(), f); });
-    b.setAttribute("aria-pressed", String(next)); updateSaveBar(); return;
-  }
+  // core: vale per chi si allena (in coppia, per entrambi)
   if(b.dataset.core!==undefined){
     const aths = athletesNow(), v = +b.dataset.core, cur = withAth(state.ath, ()=>getForm().core), next = cur===v ? null : v;
     for(const x of aths) withAth(x, ()=>{ const f = getForm(); f.touched=true; f.core=next; saveDraft(formKey(), f); });
     b.parentElement.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed", String(+x.dataset.core===next))); updateSaveBar(); return;
   }
-  if(b.id==="wuStart") startTimer(state.view);
 });
 
 async function saveGear(field, v){
@@ -913,7 +845,7 @@ function collectEntries(){
     const arr = f.sets[ex.id].map(s=>({kg:parseFloat(s.kg), reps:parseInt(s.reps,10)})).filter(s=>!isNaN(s.kg) && !isNaN(s.reps) && s.reps>0);
     if(arr.length){ entries[ex.id]=arr; scheme[ex.id]={sets:sc.sets,min:sc.min,max:sc.max,rir:sc.rir}; if(f.fb[ex.id]) fb[ex.id]=f.fb[ex.id]; n+=arr.length; }
   }
-  return {entries, scheme, fb, n, rpe:f.rpe, warm:f.warm, core:f.core, note:(f.note||"").trim()};
+  return {entries, scheme, fb, n, rpe:f.rpe, core:f.core, note:(f.note||"").trim()};
 }
 function liveStatsHTML(per){
   const planned = a => withAth(a, () => currentPlanDay().items.reduce((n,it)=>n+it.sc.sets, 0));
@@ -946,7 +878,7 @@ function updateSaveBar(){
 }
 async function saveFor(a){
   return withAth(a, async ()=>{
-    const {entries, scheme, fb, n, rpe, warm, core, note} = collectEntries(); if(!n) return null;
+    const {entries, scheme, fb, n, rpe, core, note} = collectEntries(); if(!n) return null;
     const key = formKey(), id = docId(a,state.view,state.date);
     const {items} = currentPlanDay(), swaps = {};
     for(const it of items) if(it.ex.id!==it.def.id) swaps[it.si] = it.ex.id;
@@ -954,7 +886,6 @@ async function saveFor(a){
     const ph = phaseAt(a, state.date);
     const doc = {athlete:a, day:state.view, date:state.date, block:ph.block, week:ph.wib, weekAbs:ph.weekAbs, deload:ph.deload, entries, scheme, fb, savedAt:new Date().toISOString()};
     if(rpe) doc.rpe = rpe;
-    doc.warmup = !!warm;
     if(core!=null) doc.coreRounds = core;
     if(note) doc.note = note.slice(0, 1000);
     if(Object.keys(swaps).length) doc.swaps = swaps;
@@ -1013,7 +944,7 @@ function weekSummaryHTML(ath){
     const t = vT[g]||0, l = vL[g]||0;
     h += `<div class="vrow" title="${g}: ${t} serie questa settimana, ${l} la scorsa"><span class="vn">${g}</span><span class="vt">${t?`<span class="vb" style="width:${(t/max*100).toFixed(1)}%"></span>`:""}${l?`<span class="vp" style="left:calc(${(l/max*100).toFixed(1)}% - 1px)"></span>`:""}</span><span class="vv">${t}<span class="small"> /${l}</span></span></div>`;
   }
-  h += `</div><div class="small" style="margin-top:8px">Conta le serie registrate. Mobilità e core non sono inclusi.</div></div>`;
+  h += `</div><div class="small" style="margin-top:8px">Conta le serie registrate. Il core non è incluso.</div></div>`;
   return h;
 }
 function renderProg(){
@@ -1169,64 +1100,6 @@ function wireChart(pts){
   svg.addEventListener("pointermove", move); svg.addEventListener("pointerdown", move);
   svg.addEventListener("pointerleave", ()=>{ tip.hidden=true; cross.setAttribute("visibility","hidden"); });
 }
-
-/* ================= SEGNALE E SCHERMO ================= */
-let audioCtx = null;
-function beep(n=3){
-  try{
-    audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
-    if(audioCtx.state==="suspended") audioCtx.resume();
-    for(let k=0;k<n;k++){
-      const o = audioCtx.createOscillator(), g = audioCtx.createGain(), t0 = audioCtx.currentTime + k*0.22;
-      o.frequency.value = k===n-1 ? 1046 : 880; o.connect(g); g.connect(audioCtx.destination);
-      g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.35, t0+0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0+0.16);
-      o.start(t0); o.stop(t0+0.18);
-    }
-  }catch(e){}
-  try{ navigator.vibrate?.([180,90,180]); }catch(e){}
-}
-let wakeLock = null;
-async function keepAwake(){ if(wakeLock) return; try{ wakeLock = await navigator.wakeLock?.request("screen"); wakeLock?.addEventListener?.("release", ()=>{ wakeLock = null; }); }catch(e){ wakeLock = null; } }
-document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible" && tm.running) keepAwake(); });
-
-/* ================= TIMER MOBILITÀ ================= */
-const tm = {drills:[], i:0, left:0, end:0, running:false, id:null};
-function tmShow(){
-  const d = tm.drills[tm.i];
-  $("tmStep").textContent = `Esercizio ${tm.i+1} di ${tm.drills.length} · ${d.d}`;
-  $("tmNext").textContent = tm.drills[tm.i+1] ? `Poi: ${tm.drills[tm.i+1].n}` : "Ultimo";
-  $("tmName").textContent = d.n; $("tmCue").textContent = d.c;
-  if($("tmFig").dataset.k !== d.n){ $("tmFig").dataset.k = d.n; $("tmFig").innerHTML = mobFigs(d.fig); }
-  $("tmSec").textContent = tm.left;
-  $("tmBar").style.width = (100*(1 - tm.left/d.s))+"%";
-  $("tmPause").textContent = tm.running ? "Pausa" : "Riprendi";
-}
-function tmGo(i){ tm.i = i; tm.left = tm.drills[i].s; tm.end = Date.now() + tm.left*1000; }
-function tmTick(){
-  if(!tm.running) return;
-  const left = Math.max(0, Math.ceil((tm.end-Date.now())/1000));
-  if(left===tm.left) return;
-  tm.left = left;
-  if(tm.left<=0){ if(tm.i < tm.drills.length-1){ beep(1); tmGo(tm.i+1); } else { beep(3); return tmFinish(); } }
-  tmShow();
-}
-function startTimer(day){
-  tm.drills = WARMUP[day].drills; tm.running = true; tmGo(0);
-  clearInterval(tm.id); tm.id = setInterval(tmTick, 250);
-  $("timer").hidden = false; tmShow(); keepAwake();
-  try{ audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)(); audioCtx.resume?.(); }catch(e){}
-}
-function tmClose(){ clearInterval(tm.id); tm.running=false; $("timer").hidden = true; }
-function tmFinish(){
-  tmClose();
-  if(state.view!=="prog"){
-    for(const a of athletesNow()) withAth(a, ()=>{ const f = getForm(); f.touched = true; f.warm = true; saveDraft(formKey(), f); });
-    const b = document.querySelector('[data-warm]'); if(b) b.setAttribute("aria-pressed","true"); updateSaveBar();
-  }
-}
-$("tmPause").addEventListener("click", ()=>{ tm.running = !tm.running; if(tm.running) tm.end = Date.now() + tm.left*1000; tmShow(); });
-$("tmSkip").addEventListener("click", ()=>{ if(tm.i < tm.drills.length-1){ tmGo(tm.i+1); tmShow(); } else tmFinish(); });
-$("tmStop").addEventListener("click", tmClose);
 
 /* ================= NAVIGAZIONE E DATI ================= */
 document.querySelectorAll(".seg button").forEach(b=>b.addEventListener("click",()=>{
