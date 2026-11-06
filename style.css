@@ -291,3 +291,31 @@ textarea.note + .lane-who{margin-top:10px}
 @media (max-width:380px){.sethead,.setrow{grid-template-columns:24px minmax(0,1fr) minmax(0,1fr) minmax(0,.8fr) 38px;gap:4px}.setrow input{font-size:17px}}
 .sethead span:first-child{text-align:center}
 .live-card.lane-a,.live-card.lane-v{padding-top:10px;border-radius:0 14px 14px 0}
+
+/* ===== pausa e piano dei blocchi ===== */
+.linkbtn{justify-self:start;border:0;background:none;padding:2px 0;color:var(--accent);font:600 13px var(--f-body);cursor:pointer;text-align:left}
+.pauserow{margin-top:8px}
+.pausebox{margin-top:14px;padding:12px;border-radius:10px;background:var(--warn-soft);border:1px solid var(--warn);display:grid;gap:8px;font-size:14px}
+.pausebox > b{font-family:var(--f-display);font-size:16px;letter-spacing:.04em;text-transform:uppercase;color:var(--warn)}
+.pausebox .ghost{justify-self:start;border-color:var(--warn);color:var(--warn)}
+.pausebox.ask{background:var(--surface);border-color:var(--line)}
+.pausebox.ask > b{color:var(--ink)}
+.pausebox.ask .ghost{border-color:var(--accent);color:var(--accent)}
+.pausebtns{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.block.plan .ttl em{font-style:normal;color:var(--accent)}
+.block.plan.cur{border-color:var(--accent)}
+.planweeks{display:grid;grid-template-columns:repeat(auto-fit,minmax(58px,1fr));gap:4px}
+.pw{display:grid;gap:1px;border:1px solid var(--line);background:var(--sunken);color:var(--ink2);border-radius:6px;padding:5px 2px;cursor:pointer;font:600 12px var(--f-display);letter-spacing:.04em}
+.pw small{font:400 11px var(--f-body);color:var(--muted)}
+.pw.dl{border-style:dashed}
+.pw.pz{background:var(--warn-soft);color:var(--warn)}
+.pw.past{opacity:.6}
+.pw.today{box-shadow:inset 0 -3px 0 var(--accent)}
+.pw[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);opacity:1}
+.pw[aria-pressed="true"] small{color:var(--accent-ink)}
+.changes{font-size:13px;color:var(--ink2)}
+.changes ul{margin:4px 0 0;padding-left:18px;display:grid;gap:2px}
+.planday-list{display:grid;gap:10px}
+.planday .pdh{font:700 14px var(--f-display);letter-spacing:.05em;text-transform:uppercase;margin-bottom:2px}
+.planday td:first-child{white-space:normal}
+.planday td.n{text-align:right}

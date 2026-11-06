@@ -422,15 +422,55 @@ function mondayOf(iso){ const t = Date.parse(iso.slice(0,10)+"T00:00:00Z"); retu
 /* ================= PERIODIZZAZIONE =================
    Blocchi da 5 settimane: 4 di carico progressivo (RIR 3 → 2 → 2 → 1) + 1 di scarico.
    Blocchi pari = Volume (rip alte), dispari = Carico (rip più basse). Gli accessori ruotano a ogni blocco. */
-function planOf(ath){ const p=state.plans[ath]||{}; return {start:p.start||START_DEFAULT, early:new Set(p.early||[])}; }
-function phaseAt(ath, iso){
+function planOf(ath){ const p=state.plans[ath]||{}; return {start:p.start||START_DEFAULT, early:new Set(p.early||[]), pauses:Array.isArray(p.pauses)?p.pauses:[], raw:p}; }
+const W_MS = 7*dayMs;
+const weekIdx = (start, iso) => Math.floor((mondayOf(iso)-mondayOf(start))/W_MS+1e-9);
+const weekISO = (start, k) => new Date(mondayOf(start)+k*W_MS).toISOString().slice(0,10);
+/* Settimane con almeno una seduta registrata (per atleta), in indice di settimana dall'inizio del programma */
+let wkCache = {hist:null, start:{}, map:{}};
+function sessionWeeks(ath, start){
+  if(wkCache.hist!==state.hist){ wkCache = {hist:state.hist, start:{}, map:{}}; }
+  if(wkCache.start[ath]!==start){ wkCache.start[ath]=start; wkCache.map[ath] = new Set(state.hist.filter(s=>s.athlete===ath && s.date).map(s=>weekIdx(start, s.date))); }
+  return wkCache.map[ath];
+}
+/* Pause: {from: settimana di inizio, at: quando è stata segnata}.
+   Finisce da sola con la prima seduta salvata dopo averla segnata (in una settimana ≥ from).
+   Contano come pausa solo le settimane senza sedute. Se è ancora in corso, copre le settimane passate
+   e quella di inizio: la settimana in cui riaprite l'app per allenarvi è già il rientro. */
+function pauseInfo(ath, opt={}){
+  const {start, pauses} = planOf(ath), sw = sessionWeeks(ath, start), cur = weekIdx(start, todayISO());
+  const weeks = new Set(); let ongoing = null;
+  for(const p of pauses){
+    if(typeof p.from!=="number") continue;
+    const after = state.hist.filter(s=>s.athlete===ath && s.date && (s.savedAt||"") > (p.at||"") && weekIdx(start, s.date)>=p.from).map(s=>weekIdx(start, s.date));
+    let end;
+    if(after.length) end = Math.min(...after);
+    else { ongoing = p; end = opt.resumeAt!=null ? Math.max(p.from+1, opt.resumeAt) : Math.max(p.from+1, cur); }
+    for(let k=p.from; k<end; k++) if(!sw.has(k)) weeks.add(k);
+  }
+  return {weeks, ongoing, cur};
+}
+function phaseAt(ath, iso, opt){
   const {start, early} = planOf(ath);
   const before = Date.parse(iso+"T00:00:00Z") < mondayOf(start);
-  const w = before ? 0 : Math.floor((mondayOf(iso)-mondayOf(start))/(7*dayMs)+1e-9);
-  let b=0, wib=0;
-  for(let i=0;i<w;i++){ if(wib===4 || early.has(i)){ b++; wib=0; } else wib++; }
-  const deload = wib===4 || early.has(w);
-  return {block:b, wib, weekAbs:w, deload, early:early.has(w), type:b%2===0?0:1, rir: deload?4:[3,2,2,1][wib], before, start};
+  const w = before ? 0 : weekIdx(start, iso);
+  const {weeks:paused} = pauseInfo(ath, opt);
+  let b=0, wib=0, run=0, held=0;
+  for(let i=0;i<=w;i++){
+    if(paused.has(i)){ if(!run) held=i; run++; continue; }
+    if(run){
+      // rientro: la regola dipende da dove cadeva la pausa e da quanto è durata
+      if(wib===4 || early.has(held)){ b++; wib=0; }      // il blocco era finito: si parte col nuovo
+      else if(run>=2) wib=0;                              // 2+ settimane: stesso blocco dalla settimana 1
+      else if(wib>=2){ b++; wib=0; }                      // settimane 3-4: la pausa vale come scarico
+      run=0;                                              // settimane 1-2: si riprende dalla stessa settimana
+    }
+    if(i===w) break;
+    if(wib===4 || early.has(i)){ b++; wib=0; } else wib++;
+  }
+  const isPaused = !before && paused.has(w);
+  const deload = wib===4 || early.has(w);   // in una settimana di pausa: la fase che fareste allenandovi
+  return {block:b, wib, weekAbs:w, deload, early:early.has(w), paused:isPaused, pauseRun:run, type:b%2===0?0:1, rir: deload?4:[3,2,2,1][Math.min(wib,3)], before, start};
 }
 const TYPE_NAME = ["Volume","Carico"];
 function schemeFor(ex, ph){
@@ -592,15 +632,15 @@ const $ = id => document.getElementById(id);
 function render(){
   document.querySelectorAll(".seg button[data-ath='a'], .seg button[data-ath='v']").forEach(b=>{ b.textContent = SHORT[b.dataset.ath]; });
   document.querySelectorAll(".seg button").forEach(b=>b.setAttribute("aria-pressed", String(b.dataset.ath==="both" ? !!state.couple : !state.couple && b.dataset.ath===state.ath)));
-  const wk = mondayOf(state.view==="prog" ? todayISO() : state.date);
+  const wk = mondayOf(state.view==="prog"||state.view==="piano" ? todayISO() : state.date);
   document.querySelectorAll(".tabs button").forEach(b=>{
     b.setAttribute("aria-selected", String(b.dataset.view===state.view));
     if(!b.dataset.label) b.dataset.label = b.textContent;
-    const done = b.dataset.view!=="prog" && state.hist.some(s=>s.athlete===state.ath && s.day===b.dataset.view && mondayOf(s.date)===wk);
+    const done = b.dataset.view!=="prog" && state.view!=="piano" && state.hist.some(s=>s.athlete===state.ath && s.day===b.dataset.view && mondayOf(s.date)===wk);
     b.innerHTML = esc(b.dataset.label) + (done ? `<span class="dot" title="Fatta questa settimana"></span>` : "");
   });
-  document.getElementById("savebar").hidden = state.view==="prog";
-  if(state.view==="prog") renderProg(); else renderDay();
+  document.getElementById("savebar").hidden = state.view==="prog" || state.view==="piano";
+  if(state.view==="prog") renderProg(); else if(state.view==="piano") renderPlan(); else renderDay();
   observeFigs();
 }
 
@@ -611,12 +651,96 @@ function phaseHTML(ph){
     else { if(i<ph.wib) cls+=" done"; if(i===ph.wib) cls+=" now"; }
     return `<span class="${cls}">${isDl?"Scarico":"Sett. "+(i+1)}</span>`;
   }).join("");
-  const title = ph.deload ? `Blocco ${ph.block+1} · <em>Scarico</em>${ph.early?" anticipato":""}` : `Blocco ${ph.block+1} · <em>${TYPE_NAME[ph.type]}</em>`;
+  const title = ph.paused ? `Blocco ${ph.block+1} · <em>In pausa</em>` : ph.deload ? `Blocco ${ph.block+1} · <em>Scarico</em>${ph.early?" anticipato":""}` : `Blocco ${ph.block+1} · <em>${TYPE_NAME[ph.type]}</em>`;
   const sub = ph.deload ? "RIR 4 · recupero attivo" : `Settimana ${ph.wib+1} di 4 · RIR ${ph.rir}`;
-  const hint = ph.before ? `Il programma parte ${fmtLong(ph.start)}. Le sedute di prima contano come settimana 1.` :
+  const hint = ph.paused ? `Settimana di pausa. Se vi allenate lo stesso, la pausa si chiude e la seduta vale come ${ph.deload?"scarico":"settimana "+(ph.wib+1)}.` : ph.before ? `Il programma parte ${fmtLong(ph.start)}. Le sedute di prima contano come settimana 1.` :
     ph.deload ? "Meno serie e peso ridotto: muscoli e articolazioni recuperano, la settimana dopo riparte un blocco nuovo." :
     `RIR ${ph.rir} = chiudi ogni serie con circa ${ph.rir} ripetizion${ph.rir===1?"e":"i"} ancora in serbatoio.` + (ph.wib>=2?" Questa settimana +1 serie sugli accessori.":"");
-  return `<section class="phase" aria-label="Fase del programma"><div class="phase-top"><span class="t">${title}</span><span class="s">${sub}</span></div><div class="weeks">${segs}</div><div class="hint">${hint}</div></section>`;
+  return `<section class="phase" aria-label="Fase del programma"><div class="phase-top"><span class="t">${title}</span><span class="s">${sub}</span></div><div class="weeks">${segs}</div><div class="hint">${hint}</div><button class="linkbtn" data-goplan="1">Vedi i blocchi futuri →</button></section>`;
+}
+
+
+/* ===== Pausa ===== */
+function phLabel(ph){
+  if(ph.deload) return `Blocco ${ph.block+1} · scarico${ph.early?" anticipato":""}`;
+  return `Blocco ${ph.block+1} · ${TYPE_NAME[ph.type]}, settimana ${ph.wib+1} (RIR ${ph.rir})`;
+}
+const nWeeks = n => n===1 ? "1 settimana" : `${n} settimane`;
+function pauseLines(a){
+  const {start} = planOf(a), info = pauseInfo(a), on = info.ongoing; if(!on) return null;
+  const r = Math.max(on.from+1, info.cur), rISO = weekISO(start, r);
+  const so = pauseInfo(a, {resumeAt:r}).weeks; let n = 0; for(let k=on.from; k<r; k++) if(so.has(k)) n++;
+  const now = phaseAt(a, rISO, {resumeAt:r}), later = phaseAt(a, weekISO(start, r+1), {resumeAt:r+1});
+  const fromTxt = info.cur < on.from ? `dalla prossima settimana (${fmtLong(weekISO(start,on.from))})` : `da ${fmtLong(weekISO(start,on.from))}`;
+  let t = `In pausa ${fromTxt}${n && info.cur>on.from ? ` · ${nWeeks(n)} finora` : ""}.<br>Al rientro${r===info.cur?" questa settimana":` da ${fmtLong(rISO)}`}: <b>${phLabel(now)}</b>.`;
+  if(phLabel(later)!==phLabel(now)) t += `<br>Se vi fermate anche ${r===info.cur?"questa":"quella"} settimana: ${phLabel(later)}.`;
+  return t;
+}
+function pauseHTML(aths){
+  const couple = aths.length>1, lines = aths.map(a => [a, pauseLines(a)]);
+  const on = lines.filter(([,t])=>t);
+  if(on.length){
+    const same = couple && on.length===2 && on[0][1]===on[1][1];
+    const body = same ? on[0][1] : on.map(([a,t]) => (couple?`<span class="lane-who">${SHORT[a]}</span> `:"") + t).join("<br><br>");
+    const missing = couple && on.length===1 ? `<br><span class="small">${SHORT[aths.find(a=>!pauseLines(a))]} non è in pausa.</span>` : "";
+    return `<div class="pausebox" role="status"><b>Pausa</b><span>${body}${missing}</span><span class="small">La pausa si chiude da sola quando salvate la prossima seduta.</span><button class="ghost" data-pausecancel="1">Annulla pausa</button></div>`;
+  }
+  if(!state.pauseAsk) return `<div class="pauserow"><button class="linkbtn" data-pauseask="1">Vi fermate? Segna una pausa</button></div>`;
+  const done = aths.some(thisWeekHasSession);
+  return `<div class="pausebox ask"><b>Segna una pausa${couple?" per entrambi":""}</b>
+    <span>Da quando? Al rientro l'app sceglie da sola come ripartire: in base a dove cade la pausa e a quanto dura.${done?" Questa settimana avete già delle sedute, quindi la pausa parte dalla prossima.":""}</span>
+    <div class="pausebtns">${done?"":`<button class="ghost" data-pause="this">Da questa settimana</button>`}<button class="ghost" data-pause="next">Dalla prossima settimana</button><button class="linkbtn" data-pauseask="0">Annulla</button></div></div>`;
+}
+
+/* ===== Piano: blocchi futuri, settimana per settimana ===== */
+function renderPlan(){
+  const ath = state.ath, {start} = planOf(ath), today = todayISO();
+  const cur = Math.max(0, weekIdx(start, today));
+  const phs = []; for(let k=0; k<cur+40; k++) phs.push(phaseAt(ath, weekISO(start,k)));
+  const curB = phs[cur].block, maxB = curB + 5;
+  const blocks = [];
+  phs.forEach((ph,k)=>{ if(ph.block<curB || ph.block>maxB) return; (blocks[ph.block-curB] ||= {b:ph.block, type:ph.type, weeks:[]}).weeks.push({k, ph}); });
+  const exOf = (b) => Object.fromEntries(Object.entries(DAYS).map(([d,day]) => [d, day.slots.map(sl => EX_BY_ID[exForSlot(sl, {block:b}).id])]));
+  const range = ws => `${fmtDate(weekISO(start, ws[0].k))} – ${fmtDate(new Date(mondayOf(weekISO(start, ws.at(-1).k))+6*dayMs).toISOString().slice(0,10))}`;
+  let h = `<div class="dayhead"><h2><small>${ATH[ath]}</small>Piano dei blocchi</h2><button class="ghost" data-goback="1">← Torna alla seduta</button></div>
+    <p class="small" style="margin:8px 0 0">Le date seguono il calendario: se segnate una pausa o anticipate uno scarico, si spostano da sole. I pesi sono stime dal massimale di oggi: in sala il coach li aggiorna seduta per seduta.</p><div class="prog">`;
+  for(const bl of blocks){
+    if(!bl) continue;
+    const isCur = bl.b===curB, real = bl.weeks.filter(w=>!w.ph.paused);
+    const selK = state.planSel?.[bl.b] ?? (isCur ? cur : (real[0]||bl.weeks[0]).k);
+    const sel = bl.weeks.find(w=>w.k===selK) || bl.weeks[0];
+    const prev = exOf(Math.max(0, bl.b-1)), now = exOf(bl.b);
+    const changes = bl.b===0 ? [] : Object.keys(DAYS).flatMap(d => now[d].map((ex,i)=> ex.id!==prev[d][i].id ? `${esc(prev[d][i].name)} → <b>${esc(ex.name)}</b>` : null).filter(Boolean));
+    h += `<section class="block plan${isCur?" cur":""}" aria-label="Blocco ${bl.b+1}">
+      <div class="block-top"><span class="ttl">Blocco ${bl.b+1} · <em>${TYPE_NAME[bl.type]}</em><small>${range(bl.weeks)} · ${bl.type===0?"più ripetizioni, carichi moderati":"meno ripetizioni, carichi più alti"}</small></span>${isCur?`<span class="badge">In corso</span>`:""}</div>
+      <div class="planweeks">${bl.weeks.map(({k,ph})=>{
+        const lab = ph.paused ? "Pausa" : ph.deload ? "Scarico" : `Sett. ${ph.wib+1}`;
+        const cls = ["pw", ph.paused?"pz":"", ph.deload&&!ph.paused?"dl":"", k<cur?"past":"", k===cur?"today":""].join(" ");
+        return `<button class="${cls}" data-planwk="${k}" data-blk="${bl.b}" aria-pressed="${k===sel.k}"><span>${lab}</span><small>${fmtDate(weekISO(start,k))}</small></button>`;
+      }).join("")}</div>`;
+    if(changes.length && sel===bl.weeks[0]) h += `<div class="changes"><b>Cambiano in questo blocco</b><ul>${changes.map(c=>`<li>${c}</li>`).join("")}</ul></div>`;
+    h += planWeekHTML(ath, sel.ph, now, prev, bl.b);
+    h += `</section>`;
+  }
+  h += `</div>`;
+  main.innerHTML = h;
+}
+function planWeekHTML(ath, ph, exs, prev, b){
+  if(ph.paused) return `<div class="small">Settimana di pausa: nessuna seduta in programma.</div>`;
+  const note = ph.deload ? "RIR 4 · 2 serie per esercizio, peso −10% circa: recupero" :
+    `RIR ${ph.rir} · ${ph.wib>=2?"+1 serie su accessori e isolamenti":"chiudete con "+ph.rir+" ripetizioni in riserva"}`;
+  let h = `<div class="small">${note}</div><div class="planday-list">`;
+  for(const [d, day] of Object.entries(DAYS)){
+    h += `<div class="planday"><div class="pdh">${day.label} · ${esc(day.name)}</div><table><tbody>`;
+    exs[d].forEach((ex,i) => {
+      const sc = schemeFor(ex, ph), isNew = b>0 && ex.id!==prev[d][i].id;
+      const e = ex.eq==="bw" ? null : refE1(ex.id, ath, "9999-12-31"), st = stepOf(ex, ath);
+      const kg = e ? (ph.deload ? floorTo(kgFromE1(e, sc.min, 2)*0.9, st) : floorTo(kgFromE1(e, sc.min, sc.rir), st)) : null;
+      h += `<tr><td>${esc(ex.name)}${isNew?` <span class="new">Nuovo</span>`:""}</td><td class="n">${sc.sets} × ${sc.min}${sc.max!==sc.min?"-"+sc.max:""}</td><td class="n">${kg?"≈ "+fmt(kg)+" kg":"—"}</td></tr>`;
+    });
+    h += `</tbody></table></div>`;
+  }
+  return h + `</div>`;
 }
 
 /* ===== Modalità coppia =====
@@ -624,7 +748,7 @@ function phaseHTML(ph){
    senza cambiare schermata. Il salvataggio registra due sedute, una per persona. */
 const OTHER = {a:"v", v:"a"};
 function withAth(a, fn){ const p = state.ath; state.ath = a; try{ return fn(); } finally{ state.ath = p; } }
-function athletesNow(){ return state.couple && state.view!=="prog" ? [state.ath, OTHER[state.ath]] : [state.ath]; }
+function athletesNow(){ return state.couple && state.view!=="prog" && state.view!=="piano" ? [state.ath, OTHER[state.ath]] : [state.ath]; }
 
 function renderDay(){
   const aths = athletesNow(), couple = aths.length > 1, ath = state.ath;
@@ -637,6 +761,7 @@ function renderDay(){
     if(alert) h += `<div class="coach" role="status"><b>Il coach consiglia uno scarico${couple?" a "+SHORT[a]:""}</b><span>${esc(alert)} Anticipare lo scarico a questa settimana fa recuperare prima di riprendere a salire. Il blocco successivo parte la settimana dopo.</span><button class="earlyBtn" data-early="${a}">Anticipa lo scarico</button></div>`;
   }
   h += phaseHTML(ph);
+  h += pauseHTML(aths);
   const who = couple ? `${SHORT[aths[0]]} e ${SHORT[aths[1]]}` : ATH[ath];
   const f0 = forms[ath];
   const badge = aths.some(a => forms[a].restored) ? `<span class="badge" style="color:var(--warn);background:var(--warn-soft)">Bozza ripresa</span>` :
@@ -700,6 +825,12 @@ function renderDay(){
     <li>Prima dei fondamentali: 5 minuti di cardio leggero (bici o vogatore), poi le serie di avvicinamento. Stretching e mobilità si fanno nel weekend, con l'app Mobilità A&amp;V.</li>
     <li>Il circuito core è opzionale: 2 giri a inizio programma, 3 da metà del primo blocco, 1 in scarico.</li></ul>
     <b>Scarico anticipato</b><ul><li>Se la fatica della seduta resta a 9-10, il coach propone di anticipare lo scarico.</li></ul>
+    <b>Pausa</b><ul>
+    <li>Segnala prima di fermarvi: la pausa si chiude da sola alla prima seduta salvata. Contano solo le settimane senza sedute.</li>
+    <li>Pausa di una settimana nelle settimane 1-2: si riprende dalla stessa settimana.</li>
+    <li>Pausa di una settimana nelle settimane 3-4: vale come scarico, poi blocco nuovo.</li>
+    <li>Pausa durante lo scarico: si riparte col blocco nuovo.</li>
+    <li>Due settimane o più: stesso blocco, dalla settimana 1.</li></ul>
     <b>In sala</b><ul>
     <li>Tocca ✓ a fine serie: se il campo è vuoto scrive le ripetizioni previste e il peso della serie prima.</li>
     <li>Sui fondamentali trovi le serie di avvicinamento e, per il bilanciere, i dischi da mettere per lato.</li>
@@ -780,6 +911,12 @@ main.addEventListener("change", e=>{
 main.addEventListener("toggle", e=>{ if(e.target.id) state.open[e.target.id] = e.target.open; }, true);
 main.addEventListener("click", e=>{
   const b = e.target.closest("button"); if(!b) return;
+  if(b.dataset.goplan){ state.view = "piano"; persistUi(); render(); window.scrollTo({top:0}); return; }
+  if(b.dataset.goback){ state.view = state.back || DAY_OF_WEEKDAY[new Date().getDay()] || "lun"; persistUi(); render(); window.scrollTo({top:0}); return; }
+  if(b.dataset.pauseask){ state.pauseAsk = b.dataset.pauseask==="1"; render(); return; }
+  if(b.dataset.pause){ setPause(athletesNow(), b.dataset.pause); return; }
+  if(b.dataset.pausecancel){ cancelPause(athletesNow()); return; }
+  if(b.dataset.planwk){ state.planSel = {...(state.planSel||{}), [b.dataset.blk]: +b.dataset.planwk}; render(); return; }
   const a = b.dataset.ath || state.ath;
   if(b.dataset.ok){
     withAth(a, ()=>{
@@ -835,8 +972,33 @@ main.addEventListener("focusout", ()=>{ setTimeout(()=>{ if(state.pendingRender 
 async function earlyDeload(ph){
   if(!state.db) return;
   const p = planOf(state.ath); const early = [...p.early, ph.weekAbs];
-  try{ await state.db.collection("plans").doc(state.ath).set({start:p.start, early}); state.forms = {}; }
+  try{ await state.db.collection("plans").doc(state.ath).set({...p.raw, start:p.start, early}); state.forms = {}; }
   catch(e){ document.getElementById("saveMsg").textContent = "Non sono riuscito a salvare lo scarico. Riprova."; }
+}
+/* Pausa: si segna da questa settimana o dalla prossima, per una persona o per entrambe */
+const thisWeekHasSession = a => sessionWeeks(a, planOf(a).start).has(weekIdx(planOf(a).start, todayISO()));
+async function setPause(aths, when){
+  if(!state.db) return;
+  try{
+    for(const a of aths){
+      const p = planOf(a), cur = weekIdx(p.start, todayISO());
+      // una settimana con sedute già fatte non è pausa: si parte dalla prossima
+      const from = when==="next" || thisWeekHasSession(a) ? cur+1 : cur;
+      const pauses = p.pauses.filter(x => pauseInfo(a).ongoing!==x).concat([{from, at:new Date().toISOString()}]);
+      await state.db.collection("plans").doc(a).set({...p.raw, start:p.start, early:[...p.early], pauses});
+    }
+    state.forms = {}; state.pauseAsk = false;
+  }catch(e){ document.getElementById("saveMsg").textContent = "Non sono riuscito a salvare la pausa. Riprova."; }
+}
+async function cancelPause(aths){
+  if(!state.db) return;
+  try{
+    for(const a of aths){
+      const p = planOf(a), on = pauseInfo(a).ongoing; if(!on) continue;
+      await state.db.collection("plans").doc(a).set({...p.raw, start:p.start, early:[...p.early], pauses:p.pauses.filter(x=>x!==on)});
+    }
+    state.forms = {};
+  }catch(e){ document.getElementById("saveMsg").textContent = "Non sono riuscito ad annullare la pausa. Riprova."; }
 }
 
 function collectEntries(){
@@ -859,7 +1021,7 @@ function liveStatsHTML(per){
 }
 function updateSaveBar(){
   const btn = document.getElementById("saveBtn"), msg = document.getElementById("saveMsg");
-  if(state.view==="prog") return;
+  if(state.view==="prog" || state.view==="piano") return;
   const aths = athletesNow();
   const per = aths.map(a => withAth(a, () => ({a, ...collectEntries(), f:getForm()})));
   const live = document.getElementById("live-stats"); if(live) live.innerHTML = liveStatsHTML(per);
@@ -1106,7 +1268,7 @@ document.querySelectorAll(".seg button").forEach(b=>b.addEventListener("click",(
   if(b.dataset.ath==="both") state.couple = true; else { state.couple = false; state.ath = b.dataset.ath; }
   persistUi(); render();
 }));
-document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{ state.view=b.dataset.view; persistUi(); render(); window.scrollTo({top:0}); }));
+document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{ state.view=b.dataset.view; if(b.dataset.view!=="prog") state.back=b.dataset.view; persistUi(); render(); window.scrollTo({top:0}); }));
 render();
 
 function safeRender(){
